@@ -14,6 +14,7 @@
   --green:#10b981;--gdim:rgba(16,185,129,.1);
   --red:#f43f5e;--rdim:rgba(244,63,94,.1);
   --amber:#f59e0b;--adim:rgba(245,158,11,.1);
+  --purple:#a855f7;--pdim:rgba(168,85,247,.1);
   --text:#e2e8f0;--text2:#94a3b8;--text3:#475569;
   --border:rgba(255,255,255,.06);--bc:rgba(0,212,255,.2);
   --f:'Inter',system-ui,sans-serif;--m:'JetBrains Mono','Courier New',monospace;
@@ -21,26 +22,18 @@
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f);-webkit-font-smoothing:antialiased;overflow:hidden}
 #cv{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.18}
 
-/* ── VIEWS ────────────────────────────────────────────────────────── */
 .view{position:fixed;inset:0;z-index:1;display:flex;flex-direction:column;
   transition:opacity .35s,transform .35s;will-change:transform,opacity}
 .view.hidden{opacity:0;pointer-events:none;transform:translateY(16px)}
 
-/* ═══════════════════════════════════════════════════════════════════
-   VIEW 1 — CONFIG
-═══════════════════════════════════════════════════════════════════ */
+/* ═══ VIEW 1 — CONFIG ══════════════════════════════════════════════ */
 #v1{align-items:center;justify-content:center;padding:24px}
-.config-card{
-  width:100%;max-width:500px;
-  background:rgba(9,14,26,.95);
-  border:1px solid var(--border);border-radius:16px;
-  overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,.6),0 0 120px rgba(0,212,255,.04)
-}
-.config-top{
-  padding:32px 32px 28px;
+.config-card{width:100%;max-width:500px;background:rgba(9,14,26,.95);
+  border:1px solid var(--border);border-radius:16px;overflow:hidden;
+  box-shadow:0 0 60px rgba(0,0,0,.6),0 0 120px rgba(0,212,255,.04)}
+.config-top{padding:32px 32px 28px;
   background:linear-gradient(135deg,rgba(0,212,255,.05),rgba(0,255,204,.03));
-  border-bottom:1px solid var(--border);text-align:center
-}
+  border-bottom:1px solid var(--border);text-align:center}
 .logo-big{width:52px;height:52px;position:relative;margin:0 auto 16px}
 .logo-big svg{width:100%;height:100%;animation:lspin 12s linear infinite}
 @keyframes lspin{to{transform:rotate(360deg)}}
@@ -50,16 +43,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .config-title{font-size:22px;font-weight:800;letter-spacing:4px;color:var(--cyan);text-transform:uppercase;line-height:1}
 .config-sub{font-family:var(--m);font-size:10px;color:var(--text3);letter-spacing:3px;margin-top:6px}
 .config-body{padding:28px 32px 32px;display:flex;flex-direction:column;gap:18px}
-
-/* Tabs */
 .mtabs{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px;gap:2px}
 .mtab{flex:1;padding:8px;border:none;background:transparent;color:var(--text3);
   font-family:var(--m);font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;
   border-radius:6px;transition:all .2s}
 .mtab.on{background:var(--cdim);color:var(--cyan);font-weight:600}
 .mtab:hover:not(.on){color:var(--text2)}
-
-/* Fields */
 .fld label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:7px;letter-spacing:.3px}
 .fld-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
 .fld-row label{margin:0;font-size:12px;font-weight:600;color:var(--text2)}
@@ -85,23 +74,16 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   border-radius:50%;background:var(--cyan);cursor:pointer;
   box-shadow:0 0 10px var(--cyan);border:2px solid var(--bg)}
 .range-ends{display:flex;justify-content:space-between;font-family:var(--m);font-size:10px;color:var(--text3);margin-top:5px}
-
-/* Drop zone */
 .dz-wrap{position:relative}
-.dz{border:1.5px dashed var(--border);border-radius:8px;padding:26px 14px;text-align:center;
-  cursor:pointer;transition:all .2s}
+.dz{border:1.5px dashed var(--border);border-radius:8px;padding:26px 14px;text-align:center;cursor:pointer;transition:all .2s}
 .dz:hover,.dz.drag{border-color:var(--cyan);background:var(--cdim)}
 .dz-icon{font-size:26px;margin-bottom:8px}
 .dz p{font-size:12px;color:var(--text2)}
 .dz-fn{font-family:var(--m);font-size:10px;color:var(--cyan2);margin-top:6px}
-
-/* Start button */
-.btn-start{
-  width:100%;padding:15px;border:none;border-radius:9px;
+.btn-start{width:100%;padding:15px;border:none;border-radius:9px;
   background:linear-gradient(135deg,var(--cyan) 0%,var(--cyan2) 100%);
   color:#000;font-weight:900;font-size:13px;letter-spacing:4px;text-transform:uppercase;
-  cursor:pointer;transition:all .3s;position:relative;overflow:hidden
-}
+  cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
 .btn-start::before{content:'';position:absolute;inset:0;
   background:linear-gradient(135deg,transparent,rgba(255,255,255,.2),transparent);
   transform:translateX(-100%);transition:transform .5s}
@@ -109,15 +91,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 .btn-start:hover{box-shadow:0 0 36px rgba(0,212,255,.5);transform:translateY(-2px)}
 .btn-start:disabled{background:var(--bg4);color:var(--text3);cursor:not-allowed;box-shadow:none;transform:none}
 
-/* ═══════════════════════════════════════════════════════════════════
-   VIEW 2 — SCAN / RESULTS
-═══════════════════════════════════════════════════════════════════ */
+/* ═══ VIEW 2 — SCAN ════════════════════════════════════════════════ */
 #v2{flex-direction:column}
-
-/* Top bar */
 .v2-hdr{display:flex;align-items:center;gap:14px;padding:0 20px;height:50px;flex-shrink:0;
-  background:rgba(6,10,18,.97);border-bottom:1px solid var(--border)}
-.v2-hdr::after{content:'';position:absolute;top:49px;left:0;right:0;height:1px;
+  background:rgba(6,10,18,.97);border-bottom:1px solid var(--border);position:relative}
+.v2-hdr::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;
   background:linear-gradient(90deg,transparent,var(--cyan) 30%,var(--cyan2) 70%,transparent);opacity:.2;pointer-events:none}
 .back-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);
   border-radius:6px;background:transparent;color:var(--text2);font-family:var(--m);font-size:10px;
@@ -144,43 +122,61 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   letter-spacing:2px;cursor:pointer;transition:all .2s;display:none}
 .btn-stop:hover{background:rgba(244,63,94,.2);box-shadow:0 0 12px rgba(244,63,94,.25)}
 
-/* Steps bar */
-.steps{display:flex;align-items:center;padding:14px 20px;gap:0;
-  background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0}
-.step{display:flex;align-items:center;gap:8px;flex:1;position:relative}
+/* ── Steps bar ─────────────────────────────────────────────────── */
+.steps{display:flex;align-items:center;padding:0;
+  background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0;height:64px}
+.step{display:flex;align-items:center;gap:11px;flex:1;padding:0 18px;
+  position:relative;height:100%;transition:background .3s}
 .step:not(:last-child)::after{
-  content:'';flex:1;height:1px;background:var(--border);margin:0 10px}
+  content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);
+  width:1px;height:30px;background:var(--border)}
+.step.active{background:rgba(0,212,255,.04)}
+.step.done{background:rgba(16,185,129,.03)}
+/* Connector line between steps */
+.step-connector{width:30px;flex-shrink:0;height:1px;background:var(--border)}
+.step.done+.step-connector{background:var(--green);opacity:.4}
+.step.active+.step-connector{background:var(--cyan);opacity:.3}
+
 .step-ico{
-  width:30px;height:30px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;font-size:13px;
-  border:1px solid var(--border);background:var(--bg3);flex-shrink:0;
-  transition:all .4s;position:relative
-}
-.step.active .step-ico{border-color:var(--cyan);background:var(--cdim);box-shadow:0 0 12px rgba(0,212,255,.25)}
-.step.done .step-ico{border-color:var(--green);background:var(--gdim)}
-.step-info{}
-.step-name{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1px;transition:color .3s}
+  width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);background:var(--bg3);
+  transition:all .4s;color:var(--text3)}
+.step.active .step-ico{border-color:rgba(0,212,255,.5);background:var(--cdim);color:var(--cyan);
+  box-shadow:0 0 16px rgba(0,212,255,.2)}
+.step.done .step-ico{border-color:rgba(16,185,129,.4);background:var(--gdim);color:var(--green)}
+.step-ico svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+/* Pulse ring for active step */
+.step.active .step-ico::before{
+  content:'';position:absolute;width:36px;height:36px;border-radius:10px;
+  border:1px solid var(--cyan);animation:pulse-ring .8s ease-out infinite;opacity:0}
+@keyframes pulse-ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.45);opacity:0}}
+
+.step-info{min-width:0}
+.step-name{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;
+  letter-spacing:1.5px;transition:color .3s;line-height:1}
 .step.active .step-name{color:var(--cyan)}
 .step.done .step-name{color:var(--green)}
-.step-desc{font-family:var(--m);font-size:9px;color:var(--text3);margin-top:1px;letter-spacing:.5px}
+.step-desc{font-family:var(--m);font-size:9px;color:var(--text3);margin-top:4px;
+  letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step.active .step-desc{color:rgba(0,212,255,.5)}
 
 /* Progress bar */
-.prog-bar{height:3px;background:var(--border);flex-shrink:0;position:relative}
-.prog-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--cyan2));width:0%;transition:width .5s;border-radius:0}
+.prog-bar{height:2px;background:var(--border);flex-shrink:0;position:relative}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--cyan2));width:0%;transition:width .5s}
 
 /* Stats row */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border);flex-shrink:0}
-.scard{padding:14px 18px;background:var(--bg1);position:relative;overflow:hidden}
-.scard::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:currentColor;opacity:.35}
+.scard{padding:12px 18px;background:var(--bg1);position:relative;overflow:hidden}
+.scard::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:currentColor;opacity:.3}
 .scard.g{color:var(--green)}.scard.r{color:var(--red)}.scard.a{color:var(--amber)}.scard.c{color:var(--cyan)}
-.slbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-family:var(--m);margin-bottom:5px}
-.snum{font-size:26px;font-weight:800;line-height:1;color:inherit;font-family:var(--m)}
-.ssub{font-size:9px;color:var(--text3);margin-top:4px;font-family:var(--m)}
+.slbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-family:var(--m);margin-bottom:4px}
+.snum{font-size:24px;font-weight:800;line-height:1;color:inherit;font-family:var(--m)}
+.ssub{font-size:9px;color:var(--text3);margin-top:3px;font-family:var(--m)}
 
-/* Main split */
+/* Body split */
 .v2-body{flex:1;min-height:0;display:flex;overflow:hidden}
-
-/* Left: table */
 .v2-left{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
 .tbar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border);
   background:rgba(6,10,18,.85);flex-shrink:0}
@@ -202,28 +198,56 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 .tscroll{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#1a2635 transparent}
 .tscroll::-webkit-scrollbar{width:4px}
 .tscroll::-webkit-scrollbar-thumb{background:#1a2635;border-radius:2px}
-table{width:100%;border-collapse:collapse}
+
+/* Table */
+table{width:100%;border-collapse:collapse;table-layout:fixed}
 thead th{background:rgba(4,8,16,.97);border-bottom:1px solid var(--border);
-  padding:9px 14px;text-align:left;font-family:var(--m);font-size:9px;
+  padding:9px 12px;text-align:left;font-family:var(--m);font-size:9px;
   letter-spacing:2px;color:var(--text3);text-transform:uppercase;position:sticky;top:0;z-index:5;white-space:nowrap}
+/* Column widths */
+.col-status{width:110px}
+.col-nome{width:175px}
+.col-tel{width:130px}
+.col-site{width:150px}
+.col-ig{width:175px}
+.col-motivo{width:auto}
+
 tbody tr{border-bottom:1px solid rgba(255,255,255,.025);transition:background .1s;animation:rin .2s ease-out}
 @keyframes rin{from{opacity:0;transform:translateY(2px)}to{opacity:1;transform:translateY(0)}}
 tbody tr:hover{background:rgba(0,212,255,.03)}
-td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.c-name{max-width:180px;font-weight:500}
-.c-ig{max-width:150px}
-.c-reason{max-width:190px;font-size:11px;color:var(--text3)}
-.c-rating{font-family:var(--m);font-size:11px;color:var(--text2)}
+td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;
   font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
 .bq{background:var(--gdim);color:var(--green);border:1px solid rgba(16,185,129,.2)}
 .bd{background:var(--rdim);color:var(--red);border:1px solid rgba(244,63,94,.2)}
 .br{background:var(--adim);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
-.link{color:var(--cyan);text-decoration:none;font-family:var(--m);font-size:11px}
-.link:hover{text-decoration:underline}
-.wa{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:5px;
+
+/* Site cell */
+.site-cell{display:flex;flex-direction:column;gap:2px}
+.site-link{color:var(--cyan);text-decoration:none;font-family:var(--m);font-size:10px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;display:block}
+.site-link:hover{text-decoration:underline}
+.site-tag{display:inline-flex;align-items:center;gap:3px;font-size:8px;font-family:var(--m);
+  letter-spacing:1px;text-transform:uppercase;padding:1px 5px;border-radius:3px;font-weight:700}
+.site-tag.alive{color:var(--red);background:var(--rdim)}
+.site-tag.dead{color:var(--text3);background:var(--bg3)}
+.site-tag.none{color:var(--text3)}
+
+/* IG cell */
+.ig-cell{display:flex;flex-direction:column;gap:2px}
+.ig-user{color:var(--purple);text-decoration:none;font-family:var(--m);font-size:10px;font-weight:600}
+.ig-user:hover{text-decoration:underline}
+.ig-seg{font-family:var(--m);font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:1px 5px;border-radius:3px;font-weight:700}
+.ig-seg.strong{color:var(--red);background:var(--rdim)}
+.ig-seg.mid{color:var(--amber);background:var(--adim)}
+.ig-seg.weak{color:var(--green);background:var(--gdim)}
+.ig-seg.none{color:var(--text3);font-size:8px}
+.ig-seg.unchecked{color:var(--text3);background:var(--bg3)}
+
+.wa{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:5px;
   background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.2);
-  color:#25d366;font-size:10px;font-family:var(--m);text-decoration:none;transition:all .15s}
+  color:#25d366;font-size:10px;font-family:var(--m);text-decoration:none;transition:all .15s;white-space:nowrap}
 .wa:hover{background:rgba(37,211,102,.16)}
 .muted{color:var(--text3)}
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;padding:40px}
@@ -234,8 +258,8 @@ td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;ove
 .e-title{font-size:12px;letter-spacing:3px;text-transform:uppercase;font-family:var(--m);color:var(--text3)}
 .e-sub{font-size:11px;color:var(--text3);opacity:.6}
 
-/* Right: terminal + export */
-.v2-right-panel{width:300px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
+/* Right panel */
+.v2-right-panel{width:280px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
 .terminal{flex:1;display:flex;flex-direction:column;border-bottom:1px solid var(--border);overflow:hidden}
 .term-hdr{display:flex;align-items:center;gap:7px;padding:0 12px;height:34px;flex-shrink:0;
   background:rgba(4,7,14,.95);border-bottom:1px solid var(--border)}
@@ -251,8 +275,6 @@ td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;ove
 @keyframes tlin{from{opacity:0;transform:translateX(-3px)}to{opacity:1}}
 .tl-ts{color:#1e3040;flex-shrink:0}
 .tl-m{color:var(--text2)}.tl-m.c{color:var(--cyan)}.tl-m.g{color:var(--green)}.tl-m.r{color:var(--red)}.tl-m.a{color:var(--amber)}
-
-/* Export panel */
 .exp-panel{padding:14px;flex-shrink:0}
 .exp-lbl{font-size:9px;letter-spacing:3px;color:var(--text3);text-transform:uppercase;font-family:var(--m);margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .exp-lbl::before{content:'';width:10px;height:1px;background:var(--cyan);opacity:.4}
@@ -268,9 +290,7 @@ td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;ove
 <body>
 <canvas id="cv"></canvas>
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     VIEW 1 — CONFIGURAÇÃO
-═══════════════════════════════════════════════════════════════════ -->
+<!-- ═══ VIEW 1 — CONFIGURAÇÃO ══════════════════════════════════════ -->
 <div class="view" id="v1">
   <div class="config-card">
     <div class="config-top">
@@ -283,49 +303,32 @@ td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;ove
         <div class="logo-big-core"></div>
       </div>
       <div class="config-title">J · A · R · V · I · S</div>
-      <div class="config-sub">LEAD QUALIFIER · PSICÓLOGOS · v2.0</div>
+      <div class="config-sub">LEAD QUALIFIER · PSICÓLOGOS · v2.1</div>
     </div>
-
     <div class="config-body">
-      <!-- Modo -->
       <div class="mtabs">
         <button class="mtab on" data-m="scan" onclick="setMode('scan')">⊙ Varrer Google Maps</button>
         <button class="mtab" data-m="up" onclick="setMode('up')">⇪ Upload CSV</button>
       </div>
-
-      <!-- Scan fields -->
       <div id="sf">
         <div class="fld-pair" style="margin-bottom:12px">
           <div class="fld">
             <label>Estado</label>
             <select id="sel-uf" onchange="loadCities()">
               <option value="">Selecione...</option>
-              <option value="AC">AC — Acre</option>
-              <option value="AL">AL — Alagoas</option>
-              <option value="AM">AM — Amazonas</option>
-              <option value="AP">AP — Amapá</option>
-              <option value="BA">BA — Bahia</option>
-              <option value="CE">CE — Ceará</option>
-              <option value="DF">DF — Distrito Federal</option>
-              <option value="ES">ES — Espírito Santo</option>
-              <option value="GO">GO — Goiás</option>
-              <option value="MA">MA — Maranhão</option>
-              <option value="MG">MG — Minas Gerais</option>
-              <option value="MS">MS — Mato Grosso do Sul</option>
-              <option value="MT">MT — Mato Grosso</option>
-              <option value="PA">PA — Pará</option>
-              <option value="PB">PB — Paraíba</option>
-              <option value="PE">PE — Pernambuco</option>
-              <option value="PI">PI — Piauí</option>
-              <option value="PR">PR — Paraná</option>
-              <option value="RJ">RJ — Rio de Janeiro</option>
-              <option value="RN">RN — Rio Grande do Norte</option>
-              <option value="RO">RO — Rondônia</option>
-              <option value="RR">RR — Roraima</option>
-              <option value="RS">RS — Rio Grande do Sul</option>
-              <option value="SC">SC — Santa Catarina</option>
-              <option value="SE">SE — Sergipe</option>
-              <option value="SP">SP — São Paulo</option>
+              <option value="AC">AC — Acre</option><option value="AL">AL — Alagoas</option>
+              <option value="AM">AM — Amazonas</option><option value="AP">AP — Amapá</option>
+              <option value="BA">BA — Bahia</option><option value="CE">CE — Ceará</option>
+              <option value="DF">DF — Distrito Federal</option><option value="ES">ES — Espírito Santo</option>
+              <option value="GO">GO — Goiás</option><option value="MA">MA — Maranhão</option>
+              <option value="MG">MG — Minas Gerais</option><option value="MS">MS — Mato Grosso do Sul</option>
+              <option value="MT">MT — Mato Grosso</option><option value="PA">PA — Pará</option>
+              <option value="PB">PB — Paraíba</option><option value="PE">PE — Pernambuco</option>
+              <option value="PI">PI — Piauí</option><option value="PR">PR — Paraná</option>
+              <option value="RJ">RJ — Rio de Janeiro</option><option value="RN">RN — Rio Grande do Norte</option>
+              <option value="RO">RO — Rondônia</option><option value="RR">RR — Roraima</option>
+              <option value="RS">RS — Rio Grande do Sul</option><option value="SC">SC — Santa Catarina</option>
+              <option value="SE">SE — Sergipe</option><option value="SP">SP — São Paulo</option>
               <option value="TO">TO — Tocantins</option>
             </select>
           </div>
@@ -346,8 +349,6 @@ td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;ove
         </div>
         <button class="btn-start" id="bscan" onclick="startScan()" disabled>▶ Iniciar Varredura</button>
       </div>
-
-      <!-- Upload fields -->
       <div id="uf" hidden>
         <div class="dz-wrap">
           <div class="dz" id="dz" onclick="document.getElementById('fi').click()">
@@ -363,9 +364,7 @@ td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;ove
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     VIEW 2 — SCAN / RESULTADOS
-═══════════════════════════════════════════════════════════════════ -->
+<!-- ═══ VIEW 2 — SCAN / RESULTADOS ══════════════════════════════════ -->
 <div class="view hidden" id="v2">
 
   <!-- Header -->
@@ -383,34 +382,46 @@ td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;ove
     </div>
   </div>
 
-  <!-- Steps -->
+  <!-- Steps — ícones SVG -->
   <div class="steps" id="steps">
     <div class="step" id="s0">
-      <div class="step-ico" id="s0-ico">🗺️</div>
+      <div class="step-ico" id="s0-ico" style="position:relative">
+        <!-- Map pin -->
+        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+      </div>
       <div class="step-info">
         <div class="step-name">Google Maps</div>
-        <div class="step-desc">Buscando psicólogos</div>
+        <div class="step-desc" id="s0-desc">Buscando psicólogos</div>
       </div>
     </div>
     <div class="step" id="s1">
-      <div class="step-ico" id="s1-ico">🌐</div>
+      <div class="step-ico" id="s1-ico" style="position:relative">
+        <!-- Globe -->
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 010 20"/><path d="M12 2a15.3 15.3 0 000 20"/></svg>
+      </div>
       <div class="step-info">
         <div class="step-name">Site</div>
-        <div class="step-desc">Verificando presença web</div>
+        <div class="step-desc" id="s1-desc">Verificando presença web</div>
       </div>
     </div>
     <div class="step" id="s2">
-      <div class="step-ico" id="s2-ico">📸</div>
+      <div class="step-ico" id="s2-ico" style="position:relative">
+        <!-- Camera / Instagram -->
+        <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="4"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="7" r="1.2" fill="currentColor" stroke="none"/></svg>
+      </div>
       <div class="step-info">
         <div class="step-name">Instagram</div>
-        <div class="step-desc">Checando seguidores</div>
+        <div class="step-desc" id="s2-desc">Checando seguidores</div>
       </div>
     </div>
     <div class="step" id="s3">
-      <div class="step-ico" id="s3-ico">✅</div>
+      <div class="step-ico" id="s3-ico" style="position:relative">
+        <!-- Shield check -->
+        <svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6L12 2z"/><path d="M9 12l2 2 4-4"/></svg>
+      </div>
       <div class="step-info">
         <div class="step-name">Qualificação</div>
-        <div class="step-desc">Classificando leads</div>
+        <div class="step-desc" id="s3-desc">Classificando leads</div>
       </div>
     </div>
   </div>
@@ -423,7 +434,7 @@ td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;ove
     <div class="scard g">
       <div class="slbl">Qualificados</div>
       <div class="snum" id="nq">0</div>
-      <div class="ssub">prontos p/ contato</div>
+      <div class="ssub">sem site · IG fraco</div>
     </div>
     <div class="scard r">
       <div class="slbl">Descartados</div>
@@ -438,21 +449,21 @@ td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;ove
     <div class="scard c">
       <div class="slbl">Total Analisado</div>
       <div class="snum" id="nt">0</div>
-      <div class="ssub" id="qrate">0% taxa qualif.</div>
+      <div class="ssub" id="qrate">0% qualificação</div>
     </div>
   </div>
 
   <!-- Body -->
   <div class="v2-body">
 
-    <!-- Table -->
+    <!-- Tabela de leads -->
     <div class="v2-left">
       <div class="tbar">
         <div class="ftabs">
-          <button class="ftab on" data-f="ALL"        onclick="flt('ALL')">Todos</button>
-          <button class="ftab"    data-f="QUALIFICADO" onclick="flt('QUALIFICADO')">✅ Qualificados</button>
-          <button class="ftab"    data-f="DESCARTADO"  onclick="flt('DESCARTADO')">❌ Descartados</button>
-          <button class="ftab"    data-f="REVISAR"     onclick="flt('REVISAR')">⚠ Revisar</button>
+          <button class="ftab on" data-f="ALL"         onclick="flt('ALL')">Todos</button>
+          <button class="ftab"    data-f="QUALIFICADO"  onclick="flt('QUALIFICADO')">✅ Qualificados</button>
+          <button class="ftab"    data-f="DESCARTADO"   onclick="flt('DESCARTADO')">❌ Descartados</button>
+          <button class="ftab"    data-f="REVISAR"      onclick="flt('REVISAR')">⚠ Revisar</button>
         </div>
         <div class="live" id="live"><div class="live-dot"></div>AO VIVO</div>
         <input class="t-srch" type="text" id="srch" placeholder="🔍 Buscar..." oninput="renderTable()"/>
@@ -488,8 +499,8 @@ td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;ove
       </div>
     </div>
 
-  </div><!-- /.v2-body -->
-</div><!-- /#v2 -->
+  </div>
+</div>
 
 <script>
 /* ── PARTICLES ─────────────────────────────────────────────────── */
@@ -519,13 +530,9 @@ td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;ove
 setInterval(()=>document.getElementById('clk').textContent=new Date().toTimeString().slice(0,8),1000);
 document.getElementById('clk').textContent=new Date().toTimeString().slice(0,8);
 
-/* ── VIEW TRANSITIONS ──────────────────────────────────────────── */
-function showView(id){
-  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('hidden',v.id!==id))}
-
-function goBack(){
-  if(running)stopScan();
-  showView('v1')}
+/* ── VIEW ──────────────────────────────────────────────────────── */
+function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('hidden',v.id!==id))}
+function goBack(){if(running)stopScan();showView('v1')}
 
 /* ── STATE ─────────────────────────────────────────────────────── */
 let leads=[],cf='ALL',es=null,running=false,mode='scan',selFile=null;
@@ -541,7 +548,6 @@ function log(m,cls=''){
   while(term.children.length>500)term.removeChild(term.firstChild)}
 
 /* ── STEPS ─────────────────────────────────────────────────────── */
-const STEP_KEYS=['maps','site','instagram','qualif'];
 let curStep=-1;
 function setStep(n){
   for(let i=0;i<4;i++){
@@ -549,11 +555,16 @@ function setStep(n){
     el.className='step'+(i<n?' done':i===n?' active':'')}}
 
 function detectStep(msg){
-  if(msg.includes('Maps')||msg.includes('maps')||msg.includes('Google'))return 0;
-  if(msg.includes('site')||msg.includes('Site')||msg.includes('HTTP'))return 1;
-  if(msg.includes('Instagram')||msg.includes('instagram')||msg.includes('IG'))return 2;
-  if(msg.includes('QUALIFICADO')||msg.includes('DESCARTADO')||msg.includes('REVISAR'))return 3;
+  if(/maps|google|buscando psicólogos|varrendo/i.test(msg))return 0;
+  if(/site|presença web|http/i.test(msg))return 1;
+  if(/instagram|ig\b|seguidores|@/i.test(msg))return 2;
+  if(/qualificado|descartado|revisar|concluíd/i.test(msg))return 3;
   return -1}
+
+/* ── STEPBAR DESC dinâmica ─────────────────────────────────────── */
+function setStepDesc(stepIdx, txt){
+  const el=document.getElementById('s'+stepIdx+'-desc');
+  if(el)el.textContent=txt}
 
 /* ── MODE ──────────────────────────────────────────────────────── */
 function setMode(m){
@@ -567,7 +578,6 @@ function fileSel(){
   selFile=document.getElementById('fi').files[0];
   document.getElementById('fn').textContent=selFile?.name||'nenhum arquivo';
   document.getElementById('bup').disabled=!selFile}
-
 const dz=document.getElementById('dz');
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag')});
 dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
@@ -575,7 +585,7 @@ dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');
   const f=e.dataTransfer.files[0];if(f?.name.endsWith('.csv')){selFile=f;
     document.getElementById('fn').textContent=f.name;document.getElementById('bup').disabled=false}});
 
-/* ── IBGE CITY LOADER ──────────────────────────────────────────── */
+/* ── IBGE ──────────────────────────────────────────────────────── */
 async function loadCities(){
   const uf=document.getElementById('sel-uf').value;
   const sel=document.getElementById('sel-city');
@@ -612,10 +622,8 @@ function startScan(){
 
 async function startUpload(){
   if(!selFile)return;
-  showView('v2');
-  reset(selFile.name);setRun(true,selFile.name);
-  log(`◈ PROCESSANDO CSV — ${selFile.name}`,'c');
-  setStep(3);
+  showView('v2');reset(selFile.name);setRun(true,selFile.name);
+  log(`◈ PROCESSANDO CSV — ${selFile.name}`,'c');setStep(3);
   const fd=new FormData();fd.append('file',selFile);
   try{
     const res=await fetch('/api/upload',{method:'POST',body:fd});
@@ -629,12 +637,20 @@ async function startUpload(){
 function stopScan(){fetch('/api/stop');log('◈ Parada solicitada...','a')}
 
 /* ── EVENT HANDLER ─────────────────────────────────────────────── */
+let mapsCount=0;
 function handle(d){
   if(d.type==='log'){
-    const cls=d.msg.startsWith('◈')?'c':d.msg.includes('QUALIFICADO')?'g':
-      d.msg.includes('DESCARTADO')?'r':d.msg.includes('REVISAR')?'a':'';
-    log(d.msg,cls);
-    const s=detectStep(d.msg);if(s>=0&&s>=curStep){curStep=s;setStep(s)}
+    const msg=d.msg||'';
+    const cls=msg.startsWith('◈')?'c':msg.includes('QUALIFICADO')?'g':
+      msg.includes('DESCARTADO')?'r':msg.includes('REVISAR')?'a':'';
+    log(msg,cls);
+    const s=detectStep(msg);
+    if(s>=0&&s>=curStep){curStep=s;setStep(s)}
+    // Atualizar desc dos steps com info em tempo real
+    if(s===0&&msg.includes('Analisando'))setStepDesc(0,msg.replace(/.*Analisando:\s*/,'').slice(0,28)+'…');
+    if(msg.includes('@')&&msg.includes('verificando'))setStepDesc(2,msg.replace(/.*→\s*/,'').slice(0,28));
+    if(msg.includes('SITE')||/presença|site\b/i.test(msg))setStepDesc(1,'Verificando presença web');
+
   }else if(d.type==='lead'){
     leads.push(d.lead);
     if(cf==='ALL'||d.lead.status===cf)prependRow(d.lead)
@@ -643,44 +659,42 @@ function handle(d){
   }else if(d.type==='complete'){
     updStats(d.stats);setRun(false);setStep(4);
     log(`◈ CONCLUÍDO — ${d.stats.qualificados} qualificados / ${d.stats.total} analisados`,'g');
+    setStepDesc(3,`${d.stats.qualificados} qualif. · ${d.stats.total} analisados`);
     document.getElementById('live').classList.remove('on');
     if(es){es.close();es=null}}}
 
 /* ── HELPERS ───────────────────────────────────────────────────── */
 function reset(city=''){
-  leads=[];cf='ALL';curStep=-1;
+  leads=[];cf='ALL';curStep=-1;mapsCount=0;
   document.querySelectorAll('.ftab').forEach((b,i)=>b.classList.toggle('on',i===0));
   astate={q:0,d:0,r:0,t:0};
   ['nq','nd','nr','nt'].forEach(id=>document.getElementById(id).textContent='0');
-  document.getElementById('qrate').textContent='0% taxa qualif.';
+  document.getElementById('qrate').textContent='0% qualificação';
   document.getElementById('tcnt').textContent='0 registros';
   document.getElementById('srch').value='';
   document.getElementById('pfill').style.width='0%';
-  for(let i=0;i<4;i++)document.getElementById('s'+i).className='step';
+  for(let i=0;i<4;i++){document.getElementById('s'+i).className='step'}
+  setStepDesc(0,'Buscando psicólogos');setStepDesc(1,'Verificando presença web');
+  setStepDesc(2,'Checando seguidores');setStepDesc(3,'Classificando leads');
   term.innerHTML='';scanStart=Date.now();clearInterval(lpmTick);
   document.getElementById('ts').innerHTML='<div class="empty"><div class="e-ico">⏳</div><div class="e-title">Iniciando Varredura</div><div class="e-sub">Os leads aparecerão aqui em tempo real</div></div>'}
 
 function setRun(on,city=''){
   running=on;
   const pill=document.getElementById('spill');
-  pill.className='s-pill'+(on?' scanning':'');
+  pill.className='s-pill'+(on?' scanning':' done');
   document.getElementById('stxt').textContent=on?'VARRENDO':'CONCLUÍDO';
   const vc=document.getElementById('v2city');
   if(on&&city){vc.classList.add('on');document.getElementById('v2city-txt').textContent='⊙ '+city.toUpperCase()}
   document.getElementById('bstop').style.display=on?'block':'none';
   document.getElementById('live').classList.toggle('on',on);
-  if(on){
-    lpmTick=setInterval(()=>{
-      if(!scanStart||!leads.length)return;
-      const m=(Date.now()-scanStart)/60000;
-    },5000);
-  }else clearInterval(lpmTick)}
+  if(on){lpmTick=setInterval(()=>{},5000)}else clearInterval(lpmTick)}
 
 function updStats(s){
   const nq=s.qualificados||0,nd=(s.descartados_site||0)+(s.descartados_ig||0),nr=s.revisar||0,nt=s.total||0;
   anim('nq','q',nq);anim('nd','d',nd);anim('nr','r',nr);anim('nt','t',nt);
   const pct=nt>0?Math.round(nq/nt*100):0;
-  document.getElementById('qrate').textContent=`${pct}% taxa qualif.`;
+  document.getElementById('qrate').textContent=`${pct}% qualificação`;
   const max=parseInt(document.getElementById('ms').value)||200;
   document.getElementById('pfill').style.width=Math.min(100,Math.round(nt/max*100))+'%';
   updCount()}
@@ -721,24 +735,62 @@ function renderTable(){
     wrap.innerHTML='<div class="empty"><div class="e-ico">🔍</div><div class="e-title">Sem Resultados</div><div class="e-sub">Nenhum lead corresponde ao filtro</div></div>';return}
   const rows=[...f].reverse().map(l=>mkRow(l).outerHTML).join('');
   wrap.innerHTML=`<table><thead><tr>
-    <th>Status</th><th>Nome</th><th>Contato</th><th>Instagram</th><th>Motivo</th><th>Nota</th>
+    <th class="col-status">Status</th>
+    <th class="col-nome">Nome</th>
+    <th class="col-tel">Telefone</th>
+    <th class="col-site">🌐 Site</th>
+    <th class="col-ig">📷 Instagram</th>
+    <th class="col-motivo">Motivo</th>
   </tr></thead><tbody>${rows}</tbody></table>`}
+
+function shortDomain(url){
+  try{return new URL(url).hostname.replace(/^www\./,'').slice(0,22)}catch{return url.slice(0,22)}}
 
 function mkRow(l){
   const tr=document.createElement('tr');
   const bc=l.status==='QUALIFICADO'?'bq':l.status==='REVISAR'?'br':'bd';
   const bt=l.status==='QUALIFICADO'?'✅ Qualificado':l.status==='REVISAR'?'⚠ Revisar':'❌ Descartado';
-  let phone='<span class="muted">—</span>';
-  if(l.phone){const d=l.phone.replace(/\D/g,'');const n=d.startsWith('55')?d:'55'+d;
-    phone=`<a class="wa" href="https://wa.me/${n}" target="_blank">📱 ${esc(l.phone)}</a>`}
-  let ig='<span class="muted">—</span>';
-  if(l.ig_url)ig=`<a class="link" href="${esc(l.ig_url)}" target="_blank">@${esc(l.instagram||'')} <span class="muted">(${l.ig_followers||0})</span></a>`;
-  else if(l.instagram)ig=`<span class="muted">@${esc(l.instagram)}</span>`;
-  tr.innerHTML=`<td><span class="badge ${bc}">${bt}</span></td>
-    <td class="c-name" title="${esc(l.name||'')}">${esc(l.name||'—')}</td>
-    <td>${phone}</td><td class="c-ig">${ig}</td>
-    <td class="c-reason" title="${esc(l.motivo||'')}">${esc(l.motivo||'—')}</td>
-    <td class="c-rating">${esc(l.rating||'—')}</td>`;
+
+  // Telefone / WhatsApp
+  let phoneHtml='<span class="muted">—</span>';
+  if(l.phone){
+    const d=l.phone.replace(/\D/g,'');
+    const n=d.startsWith('55')?d:'55'+d;
+    phoneHtml=`<a class="wa" href="https://wa.me/${n}" target="_blank">📱 ${esc(l.phone)}</a>`}
+
+  // Site — mostra URL + tag ATIVO/INATIVO/NÃO ENCONTRADO
+  let siteHtml='<span class="muted site-tag none">não encontrado</span>';
+  if(l.website){
+    const alive=l.motivo&&/possui site/i.test(l.motivo);
+    const tagCls=alive?'alive':'dead';
+    const tagTxt=alive?'● ATIVO':'○ INATIVO';
+    siteHtml=`<div class="site-cell">
+      <a class="site-link" href="${esc(l.website)}" target="_blank" title="${esc(l.website)}">${esc(shortDomain(l.website))}</a>
+      <span class="site-tag ${tagCls}">${tagTxt}</span>
+    </div>`}
+
+  // Instagram — mostra @user + seguidores categorizados
+  let igHtml='<span class="muted site-tag none">não encontrado</span>';
+  if(l.instagram){
+    const igUrl=l.ig_url||`https://instagram.com/${l.instagram}`;
+    const seg=l.ig_followers||0;
+    let segCls='unchecked',segTxt='não verificado';
+    if(seg>0){
+      if(seg>=1000){segCls='strong';segTxt=`${seg.toLocaleString('pt-BR')} seg. ▲`}
+      else if(seg>=300){segCls='mid';segTxt=`${seg.toLocaleString('pt-BR')} seg.`}
+      else{segCls='weak';segTxt=`${seg.toLocaleString('pt-BR')} seg. ✓`}}
+    igHtml=`<div class="ig-cell">
+      <a class="ig-user" href="${esc(igUrl)}" target="_blank">@${esc(l.instagram)}</a>
+      <span class="ig-seg ${segCls}">${segTxt}</span>
+    </div>`}
+
+  tr.innerHTML=`
+    <td><span class="badge ${bc}">${bt}</span></td>
+    <td title="${esc(l.name||'')}" style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.name||'—')}</td>
+    <td>${phoneHtml}</td>
+    <td>${siteHtml}</td>
+    <td>${igHtml}</td>
+    <td style="color:var(--text3);font-size:10px" title="${esc(l.motivo||'')}">${esc(l.motivo||'—')}</td>`;
   return tr}
 
 /* ── EXPORT / ESC ──────────────────────────────────────────────── */
