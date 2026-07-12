@@ -7,7 +7,16 @@ from playwright.async_api import async_playwright
 
 async def scrape_maps(search_term: str, max_results: int, on_result: Callable) -> None:
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(
+            headless=True,
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-setuid-sandbox",
+                "--disable-gpu",
+                "--single-process",
+            ],
+        )
         context = await browser.new_context(
             locale="pt-BR",
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",

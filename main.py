@@ -183,8 +183,10 @@ async def _run_scan(cidade: str, max_results: int):
 
         try:
             await maps_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
+        except Exception as e:
+            log(f"◈ ERRO MAPS SCRAPER: {type(e).__name__}: {e}")
 
         _save_to_disk()
         scan_state["running"] = False
