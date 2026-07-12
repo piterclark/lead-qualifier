@@ -1,7 +1,4 @@
 import os
-# Deve ser definido ANTES de qualquer import do playwright
-os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/app/playwright-browsers")
-
 import asyncio
 import csv
 import io

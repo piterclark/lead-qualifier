@@ -1,4 +1,3 @@
-import asyncio
 import re
 import shutil
 from typing import Callable
@@ -18,7 +17,6 @@ _LAUNCH_ARGS = [
     "--disable-dev-shm-usage",
     "--disable-setuid-sandbox",
     "--disable-gpu",
-    "--single-process",
 ]
 
 
@@ -77,7 +75,7 @@ async def scrape_maps(search_term: str, max_results: int, on_result: Callable) -
         await browser.close()
 
 
-async def _extract_from_href(page, href: str, context) -> dict | None:
+async def _extract_from_href(_page, href: str, context) -> dict | None:
     detail_page = await context.new_page()
     try:
         await detail_page.goto(href, wait_until="domcontentloaded", timeout=15000)
