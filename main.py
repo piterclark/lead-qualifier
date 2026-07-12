@@ -9,7 +9,7 @@ from pathlib import Path
 _PB_PATH = "/app/playwright-browsers"
 os.environ["PLAYWRIGHT_BROWSERS_PATH"] = _PB_PATH
 
-from fastapi import FastAPI, UploadFile, File, Query
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query
 from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -63,6 +63,8 @@ BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
+HISTORY_DIR = DATA_DIR / "history"
+HISTORY_DIR.mkdir(exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
@@ -101,6 +103,28 @@ def _save_to_disk():
     try:
         LEADS_FILE.write_text(json.dumps(scan_state["leads"], ensure_ascii=False, indent=2), encoding="utf-8")
         STATS_FILE.write_text(json.dumps(scan_state["stats"], ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _save_to_history():
+    """Persiste a varredura concluída no diretório de histórico."""
+    import time as _t
+    if not scan_state["leads"]:
+        return
+    scan_id = f"SCAN-{int(_t.time())}"
+    entry = {
+        "id": scan_id,
+        "scan_time": scan_state.get("scan_time", "—"),
+        "cidade": scan_state.get("_cidade", ""),
+        "stats": dict(scan_state["stats"]),
+        "leads": list(scan_state["leads"]),
+    }
+    try:
+        (HISTORY_DIR / f"{scan_id}.json").write_text(
+            json.dumps(entry, ensure_ascii=False),
+            encoding="utf-8"
+        )
     except Exception:
         pass
 
@@ -245,6 +269,7 @@ async def _run_scan(cidade: str, max_results: int):
             log(f"◈ ERRO MAPS SCRAPER: {type(e).__name__}: {e}")
 
         _save_to_disk()
+        _save_to_history()
         scan_state["running"] = False
         _broadcast({"type": "complete", "stats": dict(scan_state["stats"])})
         log(
@@ -567,7 +592,8 @@ async def step_data(step: str):
     else:
         data = []
 
-    return {"step": step, "scan_time": scan_time, "total": len(data), "data": data}
+    cidade = scan_state.get("_cidade", "")
+    return {"step": step, "scan_time": scan_time, "cidade": cidade, "total": len(data), "data": data}
 
 
 @app.get("/api/export")
@@ -600,6 +626,71 @@ async def export_csv(filter: str = "QUALIFICADO"):
         content=content,
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=leads_{filter.lower()}.csv"},
+    )
+
+
+@app.get("/api/history")
+async def list_history():
+    """Lista todas as varreduras salvas (metadados apenas, sem leads)."""
+    entries = []
+    for f in sorted(HISTORY_DIR.glob("SCAN-*.json"), reverse=True)[:100]:
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+            entries.append({
+                "id": data["id"],
+                "scan_time": data.get("scan_time", "—"),
+                "cidade": data.get("cidade", "—"),
+                "stats": data.get("stats", {}),
+                "total": len(data.get("leads", [])),
+            })
+        except Exception:
+            pass
+    return {"history": entries, "count": len(entries)}
+
+
+@app.get("/api/history/{scan_id}")
+async def get_history_scan(scan_id: str):
+    """Retorna todos os dados de uma varredura específica."""
+    f = HISTORY_DIR / f"{scan_id}.json"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="Varredura não encontrada")
+    return json.loads(f.read_text(encoding="utf-8"))
+
+
+@app.get("/api/history/{scan_id}/export")
+async def export_history_csv(scan_id: str):
+    """Exporta CSV de uma varredura do histórico."""
+    from fastapi.responses import Response
+    f = HISTORY_DIR / f"{scan_id}.json"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="Varredura não encontrada")
+    data = json.loads(f.read_text(encoding="utf-8"))
+    leads = data.get("leads", [])
+    cidade_slug = (data.get("cidade") or "scan").replace(" ", "-").replace("/", "-")[:30]
+    date_slug = (data.get("scan_time") or "").replace("/", "").replace(":", "").replace(" ", "-").replace("às", "")[:14]
+    filename = f"leads-{cidade_slug}-{date_slug}.csv".strip("-")
+
+    fieldnames = ["name", "phone", "address", "website", "instagram", "ig_url",
+                  "ig_followers", "ig_bio", "status", "motivo", "rating"]
+
+    def _clean(row: dict) -> dict:
+        cleaned = {}
+        for k, v in row.items():
+            if isinstance(v, str):
+                v = v.replace("\r\n", " ").replace("\r", " ").replace("\n", " ").strip()
+            cleaned[k] = v
+        return cleaned
+
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(_clean(l) for l in leads)
+    content = output.getvalue().encode("utf-8-sig")
+
+    return Response(
+        content=content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 

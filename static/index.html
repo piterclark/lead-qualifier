@@ -382,6 +382,19 @@ td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-ov
 .btn-hist:hover{border-color:rgba(245,158,11,.4);color:var(--amber);background:var(--adim)}
 .bh-ico{font-size:13px;line-height:1}
 
+/* ── Drawer classification banner ──────────────────────────────── */
+.dcb{display:flex;align-items:center;gap:10px;padding:14px 20px;flex-wrap:wrap;
+  background:linear-gradient(90deg,rgba(0,212,255,.06),rgba(0,255,204,.02),transparent);
+  border-bottom:1px solid var(--border)}
+.dcb-tag{font-family:var(--m);font-size:8px;font-weight:700;letter-spacing:3px;
+  text-transform:uppercase;color:var(--cyan);padding:3px 10px;
+  border:1px solid var(--bc);border-radius:4px;background:var(--cdim);white-space:nowrap}
+.dcb-div{width:1px;height:14px;background:var(--border)}
+.dcb-city{font-size:14px;font-weight:800;color:var(--text);letter-spacing:.4px}
+.dcb-uf{font-family:var(--m);font-size:10px;color:var(--cyan2);padding:2px 7px;
+  border-radius:4px;background:rgba(0,255,204,.08);border:1px solid rgba(0,255,204,.15)}
+.dcb-time{font-family:var(--m);font-size:9px;color:var(--text3);margin-left:auto}
+
 /* ── History table ──────────────────────────────────────────────── */
 .hist-table{width:100%;border-collapse:collapse;table-layout:auto}
 .hist-table thead th{background:rgba(4,8,16,.98);border-bottom:1px solid var(--border);
@@ -1026,7 +1039,7 @@ async function openDrawer(idx){
     const d=await r.json();
     document.getElementById('dTs').textContent=d.scan_time?`Extração: ${d.scan_time}`:'sem dados de scan';
     document.getElementById('dBadge').textContent=`${d.total} registro${d.total!==1?'s':''}`;
-    document.getElementById('dBody').innerHTML=renderDrawerTable(idx,d.data);
+    document.getElementById('dBody').innerHTML=renderDrawerTable(idx,d.data,d.scan_time||'',d.cidade||'');
   }catch(e){
     document.getElementById('dTs').textContent='erro ao carregar';
     document.getElementById('dBody').innerHTML='<div class="empty"><div class="e-title">Erro ao buscar dados</div></div>'}}
@@ -1042,8 +1055,26 @@ function drawerDownload(){
   if(activeDrawerIdx===null)return false;
   exportCSV(DRAWER_DL_FILTER[activeDrawerIdx]);return false}
 
-function renderDrawerTable(idx,data){
-  if(!data||!data.length)return'<div class="empty"><div class="e-ico">🔍</div><div class="e-title">Sem dados nesta etapa</div><div class="e-sub">Nenhum lead passou por aqui ainda</div></div>';
+function makeBanner(cidade,scanTime){
+  // Parse "Curitiba - PR" → cidade + UF badge
+  const parts=(cidade||'').split(' - ');
+  const uf=parts.length>1?parts[parts.length-1]:'';
+  const city=parts.length>1?parts.slice(0,-1).join(' - '):cidade;
+  // Parse time "12/07/2026 às 18:31" → "12/07/2026 · 18:31"
+  const tp=(scanTime||'').split(' às ');
+  const timeLabel=tp.length>1?`${tp[0]} · ${tp[1]}`:(scanTime||'');
+  if(!cidade&&!scanTime)return'';
+  return`<div class="dcb">
+    <span class="dcb-tag">LEADS PSICÓLOGOS</span>
+    <div class="dcb-div"></div>
+    <span class="dcb-city">${esc(city||cidade||'—')}</span>
+    ${uf?`<span class="dcb-uf">${esc(uf)}</span>`:''}
+    ${timeLabel?`<span class="dcb-time">${esc(timeLabel)}</span>`:''}
+  </div>`}
+
+function renderDrawerTable(idx,data,scanTime,cidade){
+  if(!data||!data.length)return makeBanner(cidade,scanTime)+'<div class="empty"><div class="e-ico">🔍</div><div class="e-title">Sem dados nesta etapa</div><div class="e-sub">Nenhum lead passou por aqui ainda</div></div>';
+  const banner=makeBanner(cidade,scanTime);
 
   if(idx===0){/* Maps */
     const rows=data.map(l=>`<tr>
@@ -1052,7 +1083,7 @@ function renderDrawerTable(idx,data){
       <td style="color:var(--text2);font-size:10px;max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.address||'—')}</td>
       <td><span style="font-family:var(--m);font-size:10px;color:var(--amber)">${esc(l.rating||'—')}</span></td>
     </tr>`).join('');
-    return`<table><thead><tr><th>Nome</th><th>Telefone</th><th>Endereço</th><th>Avaliação</th></tr></thead><tbody>${rows}</tbody></table>`}
+    return banner+`<table><thead><tr><th>Nome</th><th>Telefone</th><th>Endereço</th><th>Avaliação</th></tr></thead><tbody>${rows}</tbody></table>`}
 
   if(idx===1){/* Site */
     const rows=data.map(l=>{
@@ -1065,10 +1096,10 @@ function renderDrawerTable(idx,data){
         <td>${tag}</td>
         <td>${igTxt}</td>
       </tr>`}).join('');
-    return`<table><thead><tr><th>Nome</th><th>URL</th><th>Status</th><th>IG no site</th></tr></thead><tbody>${rows}</tbody></table>`}
+    return banner+`<table><thead><tr><th>Nome</th><th>URL</th><th>Status</th><th>IG no site</th></tr></thead><tbody>${rows}</tbody></table>`}
 
   if(idx===2){/* Instagram */
-    if(!data.length)return'<div class="empty"><div class="e-ico">📷</div><div class="e-title">Nenhum Instagram encontrado</div><div class="e-sub">Os leads analisados não tinham @ visível no Maps ou no site</div></div>';
+    if(!data.length)return banner+'<div class="empty"><div class="e-ico">📷</div><div class="e-title">Nenhum Instagram encontrado</div><div class="e-sub">Os leads analisados não tinham @ visível no Maps ou no site</div></div>';
     const rows=data.map(l=>{
       const seg=l.ig_followers||0;
       let segCls='unchecked',segTxt='não verificado';
@@ -1082,7 +1113,7 @@ function renderDrawerTable(idx,data){
         <td><span class="ig-seg ${segCls}">${segTxt}</span></td>
         <td style="color:var(--text3);font-size:10px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.ig_bio||'—')}</td>
       </tr>`}).join('');
-    return`<table><thead><tr><th>Nome</th><th>Instagram</th><th>Seguidores</th><th>Bio</th></tr></thead><tbody>${rows}</tbody></table>`}
+    return banner+`<table><thead><tr><th>Nome</th><th>Instagram</th><th>Seguidores</th><th>Bio</th></tr></thead><tbody>${rows}</tbody></table>`}
 
   if(idx===3){/* Qualificação */
     const rows=data.map(l=>{
@@ -1097,7 +1128,7 @@ function renderDrawerTable(idx,data){
         <td>${wa}</td>
         <td style="color:var(--text3);font-size:10px">${esc(l.motivo||'—')}</td>
       </tr>`}).join('');
-    return`<table><thead><tr><th>Status</th><th>Nome</th><th>Telefone</th><th>Motivo</th></tr></thead><tbody>${rows}</tbody></table>`}
+    return banner+`<table><thead><tr><th>Status</th><th>Nome</th><th>Telefone</th><th>Motivo</th></tr></thead><tbody>${rows}</tbody></table>`}
 
   return''}
 
