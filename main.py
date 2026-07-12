@@ -38,7 +38,7 @@ async def _download_browser_bg():
         pb = Path(_PB_PATH)
         pb.mkdir(parents=True, exist_ok=True)
         proc = await asyncio.create_subprocess_exec(
-            "python", "-m", "playwright", "install", "chromium",
+            "python", "-m", "playwright", "install", "--with-deps", "chromium",
             env={**os.environ},
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.PIPE,
