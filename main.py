@@ -219,7 +219,7 @@ async def _run_scan(cidade: str, max_results: int):
 @app.get("/api/health")
 async def health():
     """Diagnóstico do ambiente — verifica Playwright browser e Chromium do sistema."""
-    import glob as _glob, shutil as _shutil
+    import glob as _glob, shutil as _shutil, subprocess
     from scrapers.maps_scraper import _find_chromium, _SYSTEM_CHROMIUM
 
     # Playwright browsers path
@@ -229,14 +229,37 @@ async def health():
     # System chromium (includes nix store search)
     system_chromium = _SYSTEM_CHROMIUM or _find_chromium()
 
-    nix_matches = sorted(_glob.glob("/nix/store/*/bin/chromium*"))
+    # Nix store
+    nix_store_exists = Path("/nix/store").exists()
+    nix_matches = sorted(_glob.glob("/nix/store/*/bin/chromium*")) if nix_store_exists else []
+
+    # /usr/bin/ and /usr/local/bin/ chromium
+    usr_chromium = [p for p in ["/usr/bin/chromium", "/usr/bin/chromium-browser",
+                                 "/usr/local/bin/chromium", "/usr/local/bin/chromium-browser"] if Path(p).exists()]
+
+    # what is in PATH
+    path_env = os.environ.get("PATH", "")
+
+    # Check if chromium can be found via 'which' subprocess
+    try:
+        which_out = subprocess.check_output(["which", "chromium"], stderr=subprocess.DEVNULL).decode().strip()
+    except Exception:
+        which_out = None
+
+    # /app contents
+    app_contents = list(Path("/app").iterdir()) if Path("/app").exists() else []
 
     return {
         "PLAYWRIGHT_BROWSERS_PATH": browsers_path,
         "playwright_browser_found": bool(chrome_bins),
         "playwright_bins": chrome_bins[:3],
-        "system_chromium": system_chromium,
+        "system_chromium_found": system_chromium,
+        "nix_store_exists": nix_store_exists,
         "nix_chromium_paths": nix_matches[:3],
+        "usr_chromium": usr_chromium,
+        "which_chromium": which_out,
+        "PATH": path_env[:300],
+        "app_dir_items": [str(p.name) for p in app_contents[:20]],
         "ok": bool(chrome_bins) or bool(system_chromium),
     }
 
