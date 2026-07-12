@@ -212,6 +212,24 @@ async def _run_scan(cidade: str, max_results: int):
 # ROUTES
 # ─────────────────────────────────────────────────────────────────────────────
 
+@app.get("/api/health")
+async def health():
+    """Diagnóstico do ambiente — verifica se o Playwright browser está instalado."""
+    import glob as _glob
+    browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "NOT SET")
+    path_obj = Path(browsers_path) if browsers_path != "NOT SET" else None
+    path_exists = path_obj.exists() if path_obj else False
+    contents = [str(p) for p in path_obj.iterdir()] if path_exists else []
+    chrome_bins = _glob.glob(f"{browsers_path}/**/chrome*", recursive=True) if path_exists else []
+    return {
+        "PLAYWRIGHT_BROWSERS_PATH": browsers_path,
+        "path_exists": path_exists,
+        "contents": contents,
+        "chrome_executables": chrome_bins,
+        "ok": bool(chrome_bins),
+    }
+
+
 @app.get("/", response_class=HTMLResponse)
 async def root():
     html_path = STATIC_DIR / "index.html"
