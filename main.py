@@ -523,17 +523,29 @@ async def export_csv(filter: str = "QUALIFICADO"):
     if filter != "ALL":
         leads = [l for l in leads if l.get("status") == filter]
 
-    output = io.StringIO()
     fieldnames = ["name", "phone", "address", "website", "instagram", "ig_url",
                   "ig_followers", "ig_bio", "status", "motivo", "rating"]
+
+    def _clean(row: dict) -> dict:
+        """Remove newlines from all string fields to prevent CSV row splitting."""
+        cleaned = {}
+        for k, v in row.items():
+            if isinstance(v, str):
+                v = v.replace("\r\n", " ").replace("\r", " ").replace("\n", " ").strip()
+            cleaned[k] = v
+        return cleaned
+
+    # utf-8-sig adds BOM so Excel/LibreOffice detect UTF-8 automatically
+    output = io.StringIO()
+    output.write("﻿")  # UTF-8 BOM
     writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
     writer.writeheader()
-    writer.writerows(leads)
+    writer.writerows(_clean(l) for l in leads)
     output.seek(0)
 
     return StreamingResponse(
         iter([output.getvalue()]),
-        media_type="text/csv",
+        media_type="text/csv; charset=utf-8-sig",
         headers={"Content-Disposition": f"attachment; filename=leads_{filter.lower()}.csv"},
     )
 
