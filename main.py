@@ -3,6 +3,7 @@ import asyncio
 import csv
 import io
 import json
+from datetime import datetime
 from pathlib import Path
 
 _PB_PATH = "/app/playwright-browsers"
@@ -74,6 +75,7 @@ scan_state = {
     "stop_requested": False,
     "leads": [],
     "stats": {"qualificados": 0, "descartados_site": 0, "descartados_ig": 0, "revisar": 0, "total": 0},
+    "scan_time": None,       # "dd/mm/yyyy às HH:MM" — exibido no drawer de cada step
     "_task": None,           # asyncio.Task — persiste mesmo sem clientes SSE
     "_subscribers": [],      # asyncio.Queue por cliente SSE conectado
     "_log_buffer": [],       # últimos 300 logs para reconexão rápida
@@ -134,6 +136,7 @@ async def _run_scan(cidade: str, max_results: int):
         scan_state["leads"] = []
         scan_state["_log_buffer"] = []
         scan_state["_cidade"] = cidade
+        scan_state["scan_time"] = datetime.now().strftime("%d/%m/%Y às %H:%M")
         scan_state["stats"] = {
             "qualificados": 0, "descartados_site": 0,
             "descartados_ig": 0, "revisar": 0, "total": 0
@@ -184,6 +187,7 @@ async def _run_scan(cidade: str, max_results: int):
             # Etapa 2: site
             if lead.get("website"):
                 site_result = await check_site(lead["website"])
+                lead["site_alive"] = site_result["alive"]  # sempre persiste para o drawer
                 if site_result["alive"]:
                     lead["status"] = "DESCARTADO"
                     lead["motivo"] = "Possui site"
@@ -517,6 +521,42 @@ async def upload_csv(file: UploadFile = File(...)):
     )
 
 
+@app.get("/api/step-data/{step}")
+async def step_data(step: str):
+    """Retorna dados por etapa do pipeline para o drawer da UI."""
+    leads = scan_state["leads"]
+    scan_time = scan_state.get("scan_time") or "—"
+
+    if step == "maps":
+        data = [
+            {"name": l.get("name", ""), "phone": l.get("phone", ""),
+             "address": l.get("address", ""), "rating": l.get("rating", "")}
+            for l in leads
+        ]
+    elif step == "site":
+        data = [
+            {"name": l.get("name", ""), "website": l.get("website", ""),
+             "site_alive": l.get("site_alive"), "instagram": l.get("instagram", "")}
+            for l in leads if l.get("website")
+        ]
+    elif step == "instagram":
+        data = [
+            {"name": l.get("name", ""), "instagram": l.get("instagram", ""),
+             "ig_followers": l.get("ig_followers", 0), "ig_bio": l.get("ig_bio", "")}
+            for l in leads if l.get("instagram")
+        ]
+    elif step == "qualificado":
+        data = [
+            {"name": l.get("name", ""), "phone": l.get("phone", ""),
+             "status": l.get("status", ""), "motivo": l.get("motivo", "")}
+            for l in leads
+        ]
+    else:
+        data = []
+
+    return {"step": step, "scan_time": scan_time, "total": len(data), "data": data}
+
+
 @app.get("/api/export")
 async def export_csv(filter: str = "QUALIFICADO"):
     leads = scan_state["leads"]
@@ -527,7 +567,6 @@ async def export_csv(filter: str = "QUALIFICADO"):
                   "ig_followers", "ig_bio", "status", "motivo", "rating"]
 
     def _clean(row: dict) -> dict:
-        """Remove newlines from all string fields to prevent CSV row splitting."""
         cleaned = {}
         for k, v in row.items():
             if isinstance(v, str):
@@ -535,17 +574,18 @@ async def export_csv(filter: str = "QUALIFICADO"):
             cleaned[k] = v
         return cleaned
 
-    # utf-8-sig adds BOM so Excel/LibreOffice detect UTF-8 automatically
     output = io.StringIO()
-    output.write("﻿")  # UTF-8 BOM
     writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
     writer.writeheader()
     writer.writerows(_clean(l) for l in leads)
-    output.seek(0)
 
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv; charset=utf-8-sig",
+    # encode("utf-8-sig") adiciona BOM automaticamente — Excel/LibreOffice reconhecem UTF-8
+    content = output.getvalue().encode("utf-8-sig")
+
+    from fastapi.responses import Response
+    return Response(
+        content=content,
+        media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=leads_{filter.lower()}.csv"},
     )
 
