@@ -183,15 +183,24 @@ async def _run_scan(cidade: str, max_results: int):
 
             # Etapa 2: site
             if lead.get("website"):
-                has_site = await check_site(lead["website"])
-                if has_site:
+                site_result = await check_site(lead["website"])
+                if site_result["alive"]:
                     lead["status"] = "DESCARTADO"
                     lead["motivo"] = "Possui site"
                     scan_state["stats"]["descartados_site"] += 1
                     push_lead(lead)
                     continue
+                # Site offline mas pode ter Instagram linkado
+                if site_result["instagram"] and not lead.get("instagram"):
+                    lead["instagram"] = site_result["instagram"]
 
             # Etapa 3: Instagram
+            # Tenta encontrar Instagram no site se ainda não achou no Maps
+            if not lead.get("instagram") and lead.get("website"):
+                site_result = await check_site(lead["website"])
+                if site_result["instagram"]:
+                    lead["instagram"] = site_result["instagram"]
+
             ig_username = lead.get("instagram", "").strip().lstrip("@")
             if ig_username:
                 log(f"    → @{ig_username} — verificando Instagram...")
