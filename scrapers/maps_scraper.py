@@ -1,22 +1,34 @@
 import asyncio
 import re
+import shutil
 from typing import Callable
 
 from playwright.async_api import async_playwright
 
+# Encontra o Chromium do sistema (Railway/Docker usam o do nixPkgs)
+_SYSTEM_CHROMIUM = (
+    shutil.which("chromium")
+    or shutil.which("chromium-browser")
+    or shutil.which("google-chrome-stable")
+    or shutil.which("google-chrome")
+)
+
+_LAUNCH_ARGS = [
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-setuid-sandbox",
+    "--disable-gpu",
+    "--single-process",
+]
+
 
 async def scrape_maps(search_term: str, max_results: int, on_result: Callable) -> None:
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True,
-            args=[
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-setuid-sandbox",
-                "--disable-gpu",
-                "--single-process",
-            ],
-        )
+        launch_kwargs: dict = {"headless": True, "args": _LAUNCH_ARGS}
+        if _SYSTEM_CHROMIUM:
+            launch_kwargs["executable_path"] = _SYSTEM_CHROMIUM
+
+        browser = await p.chromium.launch(**launch_kwargs)
         context = await browser.new_context(
             locale="pt-BR",
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -27,7 +39,6 @@ async def scrape_maps(search_term: str, max_results: int, on_result: Callable) -
         await page.goto(f"https://www.google.com/maps/search/{encoded}", wait_until="networkidle")
         await page.wait_for_timeout(2000)
 
-        # Scroll sidebar to load results
         sidebar_sel = 'div[role="feed"]'
         collected = 0
         last_count = 0
@@ -45,7 +56,6 @@ async def scrape_maps(search_term: str, max_results: int, on_result: Callable) -
                 stall_attempts = 0
                 last_count = len(unique_hrefs)
 
-            # Try to click and extract each new result
             for href in unique_hrefs[collected:]:
                 if collected >= max_results:
                     break
@@ -57,7 +67,6 @@ async def scrape_maps(search_term: str, max_results: int, on_result: Callable) -
                 except Exception:
                     pass
 
-            # Scroll sidebar
             try:
                 feed = page.locator(sidebar_sel)
                 await feed.evaluate("el => el.scrollBy(0, 800)")
@@ -94,14 +103,12 @@ async def _extract_from_href(page, href: str, context) -> dict | None:
         rating = await _text(detail_page, 'div[jsaction*="rating"] span[aria-hidden]') or \
                  await _text(detail_page, 'span.ceNzKf') or ""
 
-        # Try to find Instagram in the page source or links
         instagram = ""
         page_content = await detail_page.content()
         ig_matches = re.findall(r'instagram\.com/([A-Za-z0-9_.]+)', page_content)
         if ig_matches:
             instagram = ig_matches[0].split("?")[0].split("/")[0]
 
-        # Also check social links
         if not instagram:
             social_links = detail_page.locator('a[href*="instagram.com"]')
             if await social_links.count():

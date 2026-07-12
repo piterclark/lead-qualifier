@@ -214,19 +214,23 @@ async def _run_scan(cidade: str, max_results: int):
 
 @app.get("/api/health")
 async def health():
-    """Diagnóstico do ambiente — verifica se o Playwright browser está instalado."""
-    import glob as _glob
+    """Diagnóstico do ambiente — verifica Playwright browser e Chromium do sistema."""
+    import glob as _glob, shutil as _shutil
     browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "NOT SET")
     path_obj = Path(browsers_path) if browsers_path != "NOT SET" else None
     path_exists = path_obj.exists() if path_obj else False
-    contents = [str(p) for p in path_obj.iterdir()] if path_exists else []
     chrome_bins = _glob.glob(f"{browsers_path}/**/chrome*", recursive=True) if path_exists else []
+    system_chromium = (
+        _shutil.which("chromium")
+        or _shutil.which("chromium-browser")
+        or _shutil.which("google-chrome-stable")
+        or _shutil.which("google-chrome")
+    )
     return {
         "PLAYWRIGHT_BROWSERS_PATH": browsers_path,
-        "path_exists": path_exists,
-        "contents": contents,
-        "chrome_executables": chrome_bins,
-        "ok": bool(chrome_bins),
+        "playwright_browser_found": bool(chrome_bins),
+        "system_chromium": system_chromium,
+        "ok": bool(chrome_bins) or bool(system_chromium),
     }
 
 
