@@ -381,6 +381,15 @@ td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-ov
   display:flex;align-items:center;gap:7px;white-space:nowrap}
 .btn-hist:hover{border-color:rgba(245,158,11,.4);color:var(--amber);background:var(--adim)}
 .bh-ico{font-size:13px;line-height:1}
+
+/* ── History table ──────────────────────────────────────────────── */
+.hist-table{width:100%;border-collapse:collapse;table-layout:auto}
+.hist-table thead th{background:rgba(4,8,16,.98);border-bottom:1px solid var(--border);
+  padding:9px 14px;text-align:left;font-family:var(--m);font-size:9px;
+  letter-spacing:2px;color:var(--text3);text-transform:uppercase;position:sticky;top:0;z-index:5}
+.hist-table tbody tr{border-bottom:1px solid rgba(255,255,255,.025);transition:background .1s}
+.hist-table tbody tr:hover{background:rgba(245,158,11,.04)}
+.hist-table td{padding:10px 14px;font-size:12px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -478,6 +487,7 @@ td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-ov
   <!-- Header -->
   <div class="v2-hdr">
     <button class="back-btn" onclick="goBack()">← Voltar</button>
+    <button class="back-btn" onclick="openHistory()" style="border-color:rgba(245,158,11,.3);color:var(--amber)">🕐 Histórico</button>
     <div class="v2-brand">J·A·R·V·I·S</div>
     <div class="v2-city" id="v2city">
       <div class="v2-cdot"></div>
@@ -1114,25 +1124,36 @@ function maybeCloseHist(e){if(e.target===document.getElementById('histOverlay'))
 
 function renderHistoryList(history){
   if(!history||!history.length)return'<div class="hist-empty"><div style="font-size:28px;opacity:.3">🕐</div><div style="font-family:var(--m);font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase">Nenhuma varredura no histórico</div></div>';
-  return history.map(s=>{
+  const rows=history.map(s=>{
+    // Parse "Curitiba - PR" → município + estado
+    const cidParts=(s.cidade||'').split(' - ');
+    const estado=cidParts.length>1?cidParts[cidParts.length-1]:'—';
+    const municipio=cidParts.length>1?cidParts.slice(0,-1).join(' - '):(s.cidade||'—');
+    // Parse "12/07/2026 às 15:30" → data + hora
+    const tp=(s.scan_time||'').split(' às ');
+    const data=tp[0]||'—';const hora=tp[1]||'—';
     const st=s.stats||{};
     const q=st.qualificados||0,nd=(st.descartados_site||0)+(st.descartados_ig||0),rv=st.revisar||0,t=st.total||0;
-    return`<div class="hist-item">
-      <div class="hist-top">
-        <span class="hist-city">${esc(s.cidade||'—')}</span>
-        <span class="hist-time">${esc(s.scan_time||'—')}</span>
-      </div>
-      <div class="hist-chips">
-        <span class="hchip g">✅ ${q} qualif.</span>
-        <span class="hchip r">❌ ${nd} descar.</span>
-        <span class="hchip a">⚠ ${rv} revisar</span>
-        <span class="hchip c">◈ ${t} total</span>
-      </div>
-      <div class="hist-actions">
-        <button class="hbtn" onclick="viewHistScan('${esc(s.id)}','${esc(s.cidade||'')}','${esc(s.scan_time||'')}')">↗ Ver leads</button>
-        <a class="hbtn dl" href="/api/history/${esc(s.id)}/export" download>⬇ Baixar CSV</a>
-      </div>
-    </div>`}).join('')}
+    return`<tr>
+      <td style="font-weight:600;white-space:nowrap">${esc(municipio)}</td>
+      <td><span style="font-family:var(--m);font-size:10px;padding:2px 7px;border-radius:4px;background:var(--bg3);color:var(--text2)">${esc(estado)}</span></td>
+      <td><span style="font-family:var(--m);font-size:10px;color:var(--text2)">${esc(data)}</span></td>
+      <td><span style="font-family:var(--m);font-size:10px;color:var(--text3)">${esc(hora)}</span></td>
+      <td><span class="hchip g">✅ ${q}</span></td>
+      <td><span class="hchip r">❌ ${nd}</span></td>
+      <td><span class="hchip a">⚠ ${rv}</span></td>
+      <td><span style="font-family:var(--m);font-size:11px;color:var(--text2)">${t}</span></td>
+      <td>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="hbtn" onclick="viewHistScan('${esc(s.id)}','${esc(s.cidade||'')}','${esc(s.scan_time||'')}')">↗ Ver</button>
+          <a class="hbtn dl" href="/api/history/${esc(s.id)}/export" download>⬇ CSV</a>
+        </div>
+      </td>
+    </tr>`}).join('');
+  return`<table class="hist-table"><thead><tr>
+    <th>Município</th><th>Estado</th><th>Data</th><th>Horário</th>
+    <th>Qualif.</th><th>Descar.</th><th>Revisar</th><th>Total</th><th>Ações</th>
+  </tr></thead><tbody>${rows}</tbody></table>`}
 
 async function viewHistScan(scanId,cidade,scanTime){
   closeHist();showView('v2');
