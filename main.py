@@ -252,6 +252,24 @@ async def health():
     }
 
 
+@app.get("/api/test-browser")
+async def test_browser():
+    """Tenta lançar o Chromium via Playwright e retorna o resultado."""
+    from playwright.async_api import async_playwright
+    import traceback
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-setuid-sandbox", "--disable-gpu"]
+            )
+            version = browser.version
+            await browser.close()
+        return {"ok": True, "browser_version": version}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "traceback": traceback.format_exc()[-2000:]}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def root():
     html_path = STATIC_DIR / "index.html"
