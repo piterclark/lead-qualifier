@@ -5,12 +5,10 @@ import io
 import json
 from pathlib import Path
 
-# Garante que o playwright encontra o browser instalado em /app/playwright-browsers
-# (caminho usado no build nixpacks — persiste pois está dentro do WORKDIR /app)
-if not os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
-    candidate = "/app/playwright-browsers"
-    if Path(candidate).exists():
-        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = candidate
+# Playwright browsers installed to /app/playwright-browsers during nixpacks build phase.
+# That directory lives inside the WORKDIR /app, so it IS copied to the runtime container.
+# Setting this unconditionally ensures playwright finds the browser regardless of CWD.
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/app/playwright-browsers"
 
 from fastapi import FastAPI, UploadFile, File, Query
 from fastapi.responses import StreamingResponse, HTMLResponse
@@ -219,48 +217,38 @@ async def _run_scan(cidade: str, max_results: int):
 @app.get("/api/health")
 async def health():
     """Diagnóstico do ambiente — verifica Playwright browser e Chromium do sistema."""
-    import glob as _glob, shutil as _shutil, subprocess
+    import glob as _glob, subprocess
     from scrapers.maps_scraper import _find_chromium, _SYSTEM_CHROMIUM
 
-    # Playwright browsers path
     browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", os.path.expanduser("~/.cache/ms-playwright"))
-    chrome_bins = _glob.glob(f"{browsers_path}/**/chrome*", recursive=True) if Path(browsers_path).exists() else []
+    pb_dir = Path(browsers_path)
+    pb_exists = pb_dir.exists()
+    pb_top = sorted(str(p.name) for p in pb_dir.iterdir()) if pb_exists else []
+    chrome_bins = _glob.glob(f"{browsers_path}/**/chrome*", recursive=True) if pb_exists else []
 
-    # System chromium (includes nix store search)
     system_chromium = _SYSTEM_CHROMIUM or _find_chromium()
 
-    # Nix store
-    nix_store_exists = Path("/nix/store").exists()
-    nix_matches = sorted(_glob.glob("/nix/store/*/bin/chromium*")) if nix_store_exists else []
-
-    # /usr/bin/ and /usr/local/bin/ chromium
     usr_chromium = [p for p in ["/usr/bin/chromium", "/usr/bin/chromium-browser",
                                  "/usr/local/bin/chromium", "/usr/local/bin/chromium-browser"] if Path(p).exists()]
-
-    # what is in PATH
-    path_env = os.environ.get("PATH", "")
-
-    # Check if chromium can be found via 'which' subprocess
     try:
         which_out = subprocess.check_output(["which", "chromium"], stderr=subprocess.DEVNULL).decode().strip()
     except Exception:
         which_out = None
 
-    # /app contents
-    app_contents = list(Path("/app").iterdir()) if Path("/app").exists() else []
+    app_contents = sorted(str(p.name) for p in Path("/app").iterdir()) if Path("/app").exists() else []
 
+    ok = bool(chrome_bins) or bool(system_chromium)
     return {
+        "ok": ok,
         "PLAYWRIGHT_BROWSERS_PATH": browsers_path,
-        "playwright_browser_found": bool(chrome_bins),
-        "playwright_bins": chrome_bins[:3],
-        "system_chromium_found": system_chromium,
-        "nix_store_exists": nix_store_exists,
-        "nix_chromium_paths": nix_matches[:3],
+        "pb_dir_exists": pb_exists,
+        "pb_top_level": pb_top,
+        "playwright_bins": chrome_bins[:5],
+        "system_chromium": system_chromium,
         "usr_chromium": usr_chromium,
         "which_chromium": which_out,
-        "PATH": path_env[:300],
-        "app_dir_items": [str(p.name) for p in app_contents[:20]],
-        "ok": bool(chrome_bins) or bool(system_chromium),
+        "PATH": os.environ.get("PATH", "")[:300],
+        "app_dir": app_contents,
     }
 
 
