@@ -5,6 +5,13 @@ import io
 import json
 from pathlib import Path
 
+# Garante que o playwright encontra o browser instalado em /app/playwright-browsers
+# (caminho usado no build nixpacks — persiste pois está dentro do WORKDIR /app)
+if not os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+    candidate = "/app/playwright-browsers"
+    if Path(candidate).exists():
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = candidate
+
 from fastapi import FastAPI, UploadFile, File, Query
 from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
