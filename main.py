@@ -335,6 +335,19 @@ async def status():
     }
 
 
+@app.get("/api/leads")
+async def get_leads():
+    """Retorna todos os leads da sessão atual (ou carregados do disco)."""
+    return {
+        "leads": scan_state["leads"],
+        "stats": scan_state["stats"],
+        "scan_time": scan_state.get("scan_time"),
+        "cidade": scan_state.get("_cidade", ""),
+        "running": scan_state["running"],
+        "total": len(scan_state["leads"]),
+    }
+
+
 @app.get("/api/stop")
 async def stop_scan():
     scan_state["stop_requested"] = True

@@ -90,6 +90,16 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 .btn-start:hover::before{transform:translateX(100%)}
 .btn-start:hover{box-shadow:0 0 36px rgba(0,212,255,.5);transform:translateY(-2px)}
 .btn-start:disabled{background:var(--bg4);color:var(--text3);cursor:not-allowed;box-shadow:none;transform:none}
+.btn-panel{width:100%;padding:11px;border:1px solid var(--border);border-radius:9px;
+  background:transparent;color:var(--text3);font-family:var(--m);font-size:10px;
+  letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all .25s;
+  display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-panel:hover{border-color:var(--bc);color:var(--cyan);background:var(--cdim)}
+.btn-panel .bp-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);transition:background .25s}
+.btn-panel:hover .bp-dot{background:var(--cyan)}
+.bp-count{font-family:var(--m);font-size:9px;padding:2px 7px;border-radius:8px;
+  background:var(--bg3);border:1px solid var(--border);color:var(--text3);transition:all .25s}
+.btn-panel:hover .bp-count{border-color:var(--bc);color:var(--cyan)}
 
 /* ═══ VIEW 2 — SCAN ════════════════════════════════════════════════ */
 #v2{flex-direction:column}
@@ -414,6 +424,12 @@ td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-ov
         </div>
         <button class="btn-start" id="bup" onclick="startUpload()" disabled>⇪ Processar CSV</button>
       </div>
+
+      <button class="btn-panel" id="bpanel" onclick="openPanel()">
+        <div class="bp-dot"></div>
+        ↗ Acessar Painel
+        <span class="bp-count" id="bpcount">—</span>
+      </button>
     </div>
   </div>
 </div>
@@ -606,9 +622,47 @@ td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-ov
 setInterval(()=>document.getElementById('clk').textContent=new Date().toTimeString().slice(0,8),1000);
 document.getElementById('clk').textContent=new Date().toTimeString().slice(0,8);
 
+/* ── Atualizar contador do botão Acessar Painel ─────────────────── */
+(async()=>{
+  try{
+    const r=await fetch('/api/leads');
+    const d=await r.json();
+    const el=document.getElementById('bpcount');
+    if(d.total>0){
+      el.textContent=`${d.total} leads`;
+      el.style.borderColor='rgba(0,212,255,.3)';
+      el.style.color='var(--cyan)';
+      const bp=document.getElementById('bpanel');
+      bp.querySelector('.bp-dot').style.background='var(--cyan)'}
+    else el.textContent='vazio'}
+  catch{}})();
+
 /* ── VIEW ──────────────────────────────────────────────────────── */
 function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('hidden',v.id!==id))}
 function goBack(){if(running)stopScan();showView('v1')}
+
+/* ── OPEN PANEL (sem varredura) ─────────────────────────────────── */
+async function openPanel(){
+  showView('v2');
+  try{
+    const r=await fetch('/api/leads');
+    const d=await r.json();
+    if(d.leads&&d.leads.length){
+      leads=d.leads;
+      const city=d.cidade||'';
+      if(city){
+        document.getElementById('v2city-txt').textContent='⊙ '+city.toUpperCase();
+        document.getElementById('v2city').classList.add('on')}
+      updStats(d.stats);
+      setStep(4);
+      setRun(false,city);
+      renderTable();
+      const ts=d.scan_time?` — última varredura: ${d.scan_time}`:'';
+      log(`◈ PAINEL CARREGADO${ts} | ${d.total} leads`,'c');
+    }else{
+      setRun(false);
+      log('◈ Nenhum resultado salvo — inicie uma varredura para ver dados','a')}
+  }catch(e){log('◈ Erro ao carregar painel','r')}}
 
 /* ── STATE ─────────────────────────────────────────────────────── */
 let leads=[],cf='ALL',es=null,running=false,mode='scan',selFile=null;
