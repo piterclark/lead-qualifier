@@ -220,20 +220,23 @@ async def _run_scan(cidade: str, max_results: int):
 async def health():
     """Diagnóstico do ambiente — verifica Playwright browser e Chromium do sistema."""
     import glob as _glob, shutil as _shutil
-    browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "NOT SET")
-    path_obj = Path(browsers_path) if browsers_path != "NOT SET" else None
-    path_exists = path_obj.exists() if path_obj else False
-    chrome_bins = _glob.glob(f"{browsers_path}/**/chrome*", recursive=True) if path_exists else []
-    system_chromium = (
-        _shutil.which("chromium")
-        or _shutil.which("chromium-browser")
-        or _shutil.which("google-chrome-stable")
-        or _shutil.which("google-chrome")
-    )
+    from scrapers.maps_scraper import _find_chromium, _SYSTEM_CHROMIUM
+
+    # Playwright browsers path
+    browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", os.path.expanduser("~/.cache/ms-playwright"))
+    chrome_bins = _glob.glob(f"{browsers_path}/**/chrome*", recursive=True) if Path(browsers_path).exists() else []
+
+    # System chromium (includes nix store search)
+    system_chromium = _SYSTEM_CHROMIUM or _find_chromium()
+
+    nix_matches = sorted(_glob.glob("/nix/store/*/bin/chromium*"))
+
     return {
         "PLAYWRIGHT_BROWSERS_PATH": browsers_path,
         "playwright_browser_found": bool(chrome_bins),
+        "playwright_bins": chrome_bins[:3],
         "system_chromium": system_chromium,
+        "nix_chromium_paths": nix_matches[:3],
         "ok": bool(chrome_bins) or bool(system_chromium),
     }
 

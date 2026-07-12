@@ -1,16 +1,27 @@
+import glob as _glob
+import os
 import re
 import shutil
 from typing import Callable
 
 from playwright.async_api import async_playwright
 
-# Encontra o Chromium do sistema (Railway/Docker usam o do nixPkgs)
-_SYSTEM_CHROMIUM = (
-    shutil.which("chromium")
-    or shutil.which("chromium-browser")
-    or shutil.which("google-chrome-stable")
-    or shutil.which("google-chrome")
-)
+
+def _find_chromium() -> str | None:
+    # 1. PATH padrão (Docker, sistemas convencionais)
+    for name in ("chromium", "chromium-browser", "google-chrome-stable", "google-chrome"):
+        path = shutil.which(name)
+        if path:
+            return path
+    # 2. Nix store (nixpacks no Railway — binaries nem sempre ficam no PATH em runtime)
+    for pattern in ("/nix/store/*/bin/chromium", "/nix/store/*/bin/chromium-browser"):
+        matches = sorted(_glob.glob(pattern))
+        if matches:
+            return matches[-1]
+    return None
+
+
+_SYSTEM_CHROMIUM = _find_chromium()
 
 _LAUNCH_ARGS = [
     "--no-sandbox",
