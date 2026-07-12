@@ -2,7 +2,7 @@
 nixPkgs = ["nss", "nspr", "atk", "cups", "dbus", "expat", "libdrm", "libxkbcommon", "mesa", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "xorg.libxshmfence"]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt", "PLAYWRIGHT_BROWSERS_PATH=/app/playwright-browsers playwright install chromium"]
+cmds = ["bash build.sh"]
 
 [start]
-cmd = "PLAYWRIGHT_BROWSERS_PATH=/app/playwright-browsers uvicorn main:app --host 0.0.0.0 --port $PORT"
+cmd = "uvicorn main:app --host 0.0.0.0 --port $PORT"
