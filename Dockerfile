@@ -1,12 +1,9 @@
-FROM python:3.11-slim
+FROM mcr.microsoft.com/playwright/python:v1.44.0-jammy
 
 WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
-# playwright install-deps instala automaticamente todas as libs do sistema necessárias
-RUN playwright install-deps chromium && playwright install chromium
 
 COPY . .
 
