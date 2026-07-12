@@ -5,10 +5,8 @@ import io
 import json
 from pathlib import Path
 
-# Playwright browsers installed to /app/playwright-browsers during nixpacks build phase.
-# That directory lives inside the WORKDIR /app, so it IS copied to the runtime container.
-# Setting this unconditionally ensures playwright finds the browser regardless of CWD.
-os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/app/playwright-browsers"
+_PB_PATH = "/app/playwright-browsers"
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = _PB_PATH
 
 from fastapi import FastAPI, UploadFile, File, Query
 from fastapi.responses import StreamingResponse, HTMLResponse
@@ -19,6 +17,46 @@ from scrapers.site_checker import check_site
 from scrapers.instagram_checker import check_instagram
 
 app = FastAPI(title="Lead Qualifier — Psicólogos")
+
+# ── Browser download state ────────────────────────────────────────────────────
+_browser_state: dict = {"status": "unknown", "error": None}
+
+
+def _browser_ready() -> bool:
+    import glob as _g
+    pb = Path(_PB_PATH)
+    return pb.exists() and bool(_g.glob(f"{_PB_PATH}/**/chrome*", recursive=True))
+
+
+async def _download_browser_bg():
+    """Downloads playwright chromium on first startup if not already present."""
+    if _browser_ready():
+        _browser_state["status"] = "ready"
+        return
+    _browser_state["status"] = "downloading"
+    try:
+        pb = Path(_PB_PATH)
+        pb.mkdir(parents=True, exist_ok=True)
+        proc = await asyncio.create_subprocess_exec(
+            "python", "-m", "playwright", "install", "chromium",
+            env={**os.environ},
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            _browser_state["status"] = "error"
+            _browser_state["error"] = (stderr or b"").decode()[-500:]
+        else:
+            _browser_state["status"] = "ready" if _browser_ready() else "error"
+    except Exception as exc:
+        _browser_state["status"] = "error"
+        _browser_state["error"] = str(exc)
+
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(_download_browser_bg())
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
@@ -217,38 +255,23 @@ async def _run_scan(cidade: str, max_results: int):
 @app.get("/api/health")
 async def health():
     """Diagnóstico do ambiente — verifica Playwright browser e Chromium do sistema."""
-    import glob as _glob, subprocess
+    import glob as _glob
     from scrapers.maps_scraper import _find_chromium, _SYSTEM_CHROMIUM
 
-    browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", os.path.expanduser("~/.cache/ms-playwright"))
-    pb_dir = Path(browsers_path)
-    pb_exists = pb_dir.exists()
-    pb_top = sorted(str(p.name) for p in pb_dir.iterdir()) if pb_exists else []
-    chrome_bins = _glob.glob(f"{browsers_path}/**/chrome*", recursive=True) if pb_exists else []
+    pb_exists = Path(_PB_PATH).exists()
+    pb_top = sorted(str(p.name) for p in Path(_PB_PATH).iterdir()) if pb_exists else []
+    chrome_bins = _glob.glob(f"{_PB_PATH}/**/chrome*", recursive=True) if pb_exists else []
 
-    system_chromium = _SYSTEM_CHROMIUM or _find_chromium()
-
-    usr_chromium = [p for p in ["/usr/bin/chromium", "/usr/bin/chromium-browser",
-                                 "/usr/local/bin/chromium", "/usr/local/bin/chromium-browser"] if Path(p).exists()]
-    try:
-        which_out = subprocess.check_output(["which", "chromium"], stderr=subprocess.DEVNULL).decode().strip()
-    except Exception:
-        which_out = None
-
-    app_contents = sorted(str(p.name) for p in Path("/app").iterdir()) if Path("/app").exists() else []
-
-    ok = bool(chrome_bins) or bool(system_chromium)
+    ok = bool(chrome_bins) or bool(_SYSTEM_CHROMIUM or _find_chromium())
     return {
         "ok": ok,
-        "PLAYWRIGHT_BROWSERS_PATH": browsers_path,
+        "browser_status": _browser_state["status"],
+        "browser_error": _browser_state["error"],
+        "PLAYWRIGHT_BROWSERS_PATH": _PB_PATH,
         "pb_dir_exists": pb_exists,
         "pb_top_level": pb_top,
-        "playwright_bins": chrome_bins[:5],
-        "system_chromium": system_chromium,
-        "usr_chromium": usr_chromium,
-        "which_chromium": which_out,
-        "PATH": os.environ.get("PATH", "")[:300],
-        "app_dir": app_contents,
+        "playwright_bins": chrome_bins[:3],
+        "app_dir": sorted(str(p.name) for p in Path("/app").iterdir()) if Path("/app").exists() else [],
     }
 
 
