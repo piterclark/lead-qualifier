@@ -28,10 +28,18 @@ _LAUNCH_ARGS = [
     "--disable-dev-shm-usage",
     "--disable-setuid-sandbox",
     "--disable-gpu",
+    "--disable-blink-features=AutomationControlled",
+]
+
+_USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 ]
 
 
 async def scrape_maps(search_term: str, max_results: int, on_result: Callable) -> None:
+    import random
     async with async_playwright() as p:
         launch_kwargs: dict = {"headless": True, "args": _LAUNCH_ARGS}
         if _SYSTEM_CHROMIUM:
@@ -40,12 +48,26 @@ async def scrape_maps(search_term: str, max_results: int, on_result: Callable) -
         browser = await p.chromium.launch(**launch_kwargs)
         context = await browser.new_context(
             locale="pt-BR",
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            user_agent=random.choice(_USER_AGENTS),
+            viewport={"width": 1280, "height": 900},
+            java_script_enabled=True,
         )
+        # Remove webdriver flag para evitar detecção de bot
+        await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         page = await context.new_page()
 
         encoded = search_term.replace(" ", "+")
-        await page.goto(f"https://www.google.com/maps/search/{encoded}", wait_until="networkidle")
+        # domcontentloaded em vez de networkidle — Google Maps nunca atinge networkidle
+        await page.goto(
+            f"https://www.google.com/maps/search/{encoded}",
+            wait_until="domcontentloaded",
+            timeout=60000,
+        )
+        # Aguarda o feed lateral aparecer (confirma que a busca carregou)
+        try:
+            await page.wait_for_selector('div[role="feed"], a[href*="/maps/place/"]', timeout=20000)
+        except Exception:
+            pass
         await page.wait_for_timeout(2000)
 
         sidebar_sel = 'div[role="feed"]'
