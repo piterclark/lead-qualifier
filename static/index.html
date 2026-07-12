@@ -349,6 +349,38 @@ td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-ov
   letter-spacing:2px;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
 .drawer-dl:hover{border-color:var(--green);box-shadow:0 0 14px rgba(16,185,129,.25);background:rgba(16,185,129,.15)}
 .drawer-dl-note{font-family:var(--m);font-size:9px;color:var(--text3);letter-spacing:.5px}
+
+/* ── History items ──────────────────────────────────────────────── */
+.hist-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:200px;gap:10px;opacity:.5}
+.hist-item{padding:16px 20px;border-bottom:1px solid var(--border);transition:background .15s}
+.hist-item:hover{background:rgba(245,158,11,.03)}
+.hist-item:last-child{border-bottom:none}
+.hist-top{display:flex;align-items:baseline;gap:10px;margin-bottom:7px}
+.hist-city{font-size:13px;font-weight:700;color:var(--text);letter-spacing:.3px}
+.hist-time{font-family:var(--m);font-size:9px;color:var(--text3)}
+.hist-chips{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.hchip{font-family:var(--m);font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px}
+.hchip.g{color:var(--green);background:var(--gdim)}
+.hchip.r{color:var(--red);background:var(--rdim)}
+.hchip.a{color:var(--amber);background:var(--adim)}
+.hchip.c{color:var(--cyan);background:var(--cdim)}
+.hist-actions{display:flex;gap:8px}
+.hbtn{padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:transparent;
+  color:var(--text2);font-family:var(--m);font-size:9px;letter-spacing:1px;cursor:pointer;
+  transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.hbtn:hover{border-color:var(--bc);color:var(--cyan);background:var(--cdim)}
+.hbtn.dl:hover{border-color:rgba(16,185,129,.4);color:var(--green);background:var(--gdim)}
+
+/* ── Buttons row (Painel + Histórico) ───────────────────────────── */
+.btns-row{display:flex;gap:8px;align-items:stretch}
+.btns-row .btn-panel{flex:1}
+.btn-hist{flex-shrink:0;padding:11px 14px;border:1px solid var(--border);border-radius:9px;
+  background:transparent;color:var(--text3);font-family:var(--m);font-size:10px;
+  letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .25s;
+  display:flex;align-items:center;gap:7px;white-space:nowrap}
+.btn-hist:hover{border-color:rgba(245,158,11,.4);color:var(--amber);background:var(--adim)}
+.bh-ico{font-size:13px;line-height:1}
 </style>
 </head>
 <body>
@@ -425,11 +457,17 @@ td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-ov
         <button class="btn-start" id="bup" onclick="startUpload()" disabled>⇪ Processar CSV</button>
       </div>
 
-      <button class="btn-panel" id="bpanel" onclick="openPanel()">
-        <div class="bp-dot"></div>
-        ↗ Acessar Painel
-        <span class="bp-count" id="bpcount">—</span>
-      </button>
+      <div class="btns-row">
+        <button class="btn-panel" id="bpanel" onclick="openPanel()">
+          <div class="bp-dot"></div>
+          ↗ Acessar Painel
+          <span class="bp-count" id="bpcount">—</span>
+        </button>
+        <button class="btn-hist" onclick="openHistory()">
+          <span class="bh-ico">🕐</span>
+          Histórico
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -590,6 +628,32 @@ td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-ov
     <div class="drawer-foot">
       <a class="drawer-dl" id="dDl" href="#" onclick="return drawerDownload()">⬇ Baixar CSV</a>
       <span class="drawer-dl-note" id="dNote">Exporta os dados desta extração</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HISTORY DRAWER ══════════════════════════════════════════════ -->
+<div class="drawer-overlay" id="histOverlay" onclick="maybeCloseHist(event)">
+  <div class="drawer">
+    <div class="drawer-hdr" style="border-bottom-color:rgba(245,158,11,.15)">
+      <div class="drawer-ico" style="border-color:rgba(245,158,11,.35);background:var(--adim);color:var(--amber)">
+        <svg viewBox="0 0 24 24" style="width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="drawer-meta">
+        <div class="drawer-title" style="color:var(--amber)">HISTÓRICO</div>
+        <div class="drawer-ts" id="histTs">Todas as varreduras realizadas</div>
+      </div>
+      <div class="drawer-badge" id="histBadge">—</div>
+      <button class="drawer-close" onclick="closeHist()">✕</button>
+    </div>
+    <div class="drawer-body" id="histBody">
+      <div class="hist-empty">
+        <div style="font-size:28px;opacity:.3">🕐</div>
+        <div style="font-family:var(--m);font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase">Sem histórico</div>
+      </div>
+    </div>
+    <div class="drawer-foot">
+      <span class="drawer-dl-note">Clique em "Ver leads" para carregar uma varredura anterior no painel</span>
     </div>
   </div>
 </div>
@@ -1026,6 +1090,65 @@ function renderDrawerTable(idx,data){
     return`<table><thead><tr><th>Status</th><th>Nome</th><th>Telefone</th><th>Motivo</th></tr></thead><tbody>${rows}</tbody></table>`}
 
   return''}
+
+/* ── HISTORY DRAWER ─────────────────────────────────────────────── */
+async function openHistory(){
+  document.getElementById('histOverlay').classList.add('open');
+  document.getElementById('histTs').textContent='Carregando...';
+  document.getElementById('histBadge').textContent='...';
+  document.getElementById('histBody').innerHTML='<div class="empty"><div class="e-ico">⏳</div><div class="e-title">Carregando histórico...</div></div>';
+  try{
+    const r=await fetch('/api/history');
+    const d=await r.json();
+    const list=d.history||[];
+    document.getElementById('histBadge').textContent=`${list.length} varredura${list.length!==1?'s':''}`;
+    document.getElementById('histTs').textContent=list.length?`Última: ${list[0].scan_time||'—'}`:'Nenhuma varredura encontrada';
+    document.getElementById('histBody').innerHTML=renderHistoryList(list);
+  }catch(e){
+    document.getElementById('histTs').textContent='erro ao carregar';
+    document.getElementById('histBody').innerHTML='<div class="empty"><div class="e-title">Erro ao buscar histórico</div></div>'}}
+
+function closeHist(){document.getElementById('histOverlay').classList.remove('open')}
+
+function maybeCloseHist(e){if(e.target===document.getElementById('histOverlay'))closeHist()}
+
+function renderHistoryList(history){
+  if(!history||!history.length)return'<div class="hist-empty"><div style="font-size:28px;opacity:.3">🕐</div><div style="font-family:var(--m);font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase">Nenhuma varredura no histórico</div></div>';
+  return history.map(s=>{
+    const st=s.stats||{};
+    const q=st.qualificados||0,nd=(st.descartados_site||0)+(st.descartados_ig||0),rv=st.revisar||0,t=st.total||0;
+    return`<div class="hist-item">
+      <div class="hist-top">
+        <span class="hist-city">${esc(s.cidade||'—')}</span>
+        <span class="hist-time">${esc(s.scan_time||'—')}</span>
+      </div>
+      <div class="hist-chips">
+        <span class="hchip g">✅ ${q} qualif.</span>
+        <span class="hchip r">❌ ${nd} descar.</span>
+        <span class="hchip a">⚠ ${rv} revisar</span>
+        <span class="hchip c">◈ ${t} total</span>
+      </div>
+      <div class="hist-actions">
+        <button class="hbtn" onclick="viewHistScan('${esc(s.id)}','${esc(s.cidade||'')}','${esc(s.scan_time||'')}')">↗ Ver leads</button>
+        <a class="hbtn dl" href="/api/history/${esc(s.id)}/export" download>⬇ Baixar CSV</a>
+      </div>
+    </div>`}).join('')}
+
+async function viewHistScan(scanId,cidade,scanTime){
+  closeHist();showView('v2');
+  try{
+    const r=await fetch(`/api/history/${scanId}`);
+    const d=await r.json();
+    if(d.leads&&d.leads.length){
+      leads=d.leads;
+      const city=d.cidade||cidade||'';
+      if(city){
+        document.getElementById('v2city-txt').textContent='⊙ '+city.toUpperCase();
+        document.getElementById('v2city').classList.add('on')}
+      updStats(d.stats||{});setStep(4);setRun(false,city);renderTable();
+      log(`◈ HISTÓRICO — ${d.scan_time||scanTime} | ${d.leads.length} leads`,'a');
+    }else{setRun(false);log('◈ Varredura vazia no histórico','a')}
+  }catch(e){log('◈ Erro ao carregar varredura do histórico','r')}}
 </script>
 </body>
 </html>
