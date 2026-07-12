@@ -69,6 +69,16 @@ input[type=text]{width:100%;background:rgba(0,0,0,.5);border:1px solid var(--bor
   outline:none;transition:all .2s}
 input[type=text]:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,.08)}
 input[type=text]::placeholder{color:var(--text3)}
+select{width:100%;background:rgba(0,0,0,.5);border:1px solid var(--border);
+  border-radius:8px;padding:11px 14px;color:var(--text);font-family:var(--m);font-size:13px;
+  outline:none;transition:all .2s;cursor:pointer;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300d4ff' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center}
+select:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,.08)}
+select:disabled{opacity:.35;cursor:not-allowed}
+select option{background:#0d1425;color:var(--text)}
+.fld-pair{display:flex;gap:10px}
+.fld-pair .fld{flex:1}
 input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:3px;
   background:var(--border);border-radius:2px;outline:none;cursor:pointer}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;
@@ -285,9 +295,46 @@ td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;ove
 
       <!-- Scan fields -->
       <div id="sf">
-        <div class="fld" style="margin-bottom:14px">
-          <label>Cidade Alvo</label>
-          <input type="text" id="cid" placeholder="Ex: São Paulo - SP" autocomplete="off"/>
+        <div class="fld-pair" style="margin-bottom:12px">
+          <div class="fld">
+            <label>Estado</label>
+            <select id="sel-uf" onchange="loadCities()">
+              <option value="">Selecione...</option>
+              <option value="AC">AC — Acre</option>
+              <option value="AL">AL — Alagoas</option>
+              <option value="AM">AM — Amazonas</option>
+              <option value="AP">AP — Amapá</option>
+              <option value="BA">BA — Bahia</option>
+              <option value="CE">CE — Ceará</option>
+              <option value="DF">DF — Distrito Federal</option>
+              <option value="ES">ES — Espírito Santo</option>
+              <option value="GO">GO — Goiás</option>
+              <option value="MA">MA — Maranhão</option>
+              <option value="MG">MG — Minas Gerais</option>
+              <option value="MS">MS — Mato Grosso do Sul</option>
+              <option value="MT">MT — Mato Grosso</option>
+              <option value="PA">PA — Pará</option>
+              <option value="PB">PB — Paraíba</option>
+              <option value="PE">PE — Pernambuco</option>
+              <option value="PI">PI — Piauí</option>
+              <option value="PR">PR — Paraná</option>
+              <option value="RJ">RJ — Rio de Janeiro</option>
+              <option value="RN">RN — Rio Grande do Norte</option>
+              <option value="RO">RO — Rondônia</option>
+              <option value="RR">RR — Roraima</option>
+              <option value="RS">RS — Rio Grande do Sul</option>
+              <option value="SC">SC — Santa Catarina</option>
+              <option value="SE">SE — Sergipe</option>
+              <option value="SP">SP — São Paulo</option>
+              <option value="TO">TO — Tocantins</option>
+            </select>
+          </div>
+          <div class="fld">
+            <label>Município</label>
+            <select id="sel-city" disabled onchange="updCityLabel()">
+              <option value="">Estado primeiro</option>
+            </select>
+          </div>
         </div>
         <div class="fld" style="margin-bottom:16px">
           <div class="fld-row">
@@ -297,7 +344,7 @@ td{padding:10px 14px;font-size:12px;vertical-align:middle;white-space:nowrap;ove
           <input type="range" id="ms" min="10" max="2500" value="200" oninput="rv.textContent=this.value"/>
           <div class="range-ends"><span>10</span><span>2.500</span></div>
         </div>
-        <button class="btn-start" id="bscan" onclick="startScan()">▶ Iniciar Varredura</button>
+        <button class="btn-start" id="bscan" onclick="startScan()" disabled>▶ Iniciar Varredura</button>
       </div>
 
       <!-- Upload fields -->
@@ -528,16 +575,38 @@ dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');
   const f=e.dataTransfer.files[0];if(f?.name.endsWith('.csv')){selFile=f;
     document.getElementById('fn').textContent=f.name;document.getElementById('bup').disabled=false}});
 
+/* ── IBGE CITY LOADER ──────────────────────────────────────────── */
+async function loadCities(){
+  const uf=document.getElementById('sel-uf').value;
+  const sel=document.getElementById('sel-city');
+  const btn=document.getElementById('bscan');
+  sel.disabled=true;btn.disabled=true;
+  sel.innerHTML='<option value="">Carregando...</option>';
+  if(!uf){sel.innerHTML='<option value="">Estado primeiro</option>';return}
+  try{
+    const r=await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`);
+    const data=await r.json();
+    sel.innerHTML='<option value="">Selecione o município...</option>'+
+      data.map(m=>`<option value="${m.nome}">${m.nome}</option>`).join('');
+    sel.disabled=false;
+  }catch{sel.innerHTML='<option value="">Erro — tente novamente</option>'}}
+
+function updCityLabel(){
+  const city=document.getElementById('sel-city').value;
+  document.getElementById('bscan').disabled=!city}
+
 /* ── SCAN ──────────────────────────────────────────────────────── */
 function startScan(){
-  const city=document.getElementById('cid').value.trim();
-  if(!city){alert('Informe uma cidade alvo!');return}
+  const uf=document.getElementById('sel-uf').value;
+  const city=document.getElementById('sel-city').value;
+  if(!uf||!city){alert('Selecione estado e município!');return}
+  const cityFull=`${city} - ${uf}`;
   const max=parseInt(document.getElementById('ms').value)||200;
   showView('v2');
-  reset(city);setRun(true,city);
-  log(`◈ VARREDURA INICIADA — ${city} | limite: ${max}`,'c');
+  reset(cityFull);setRun(true,cityFull);
+  log(`◈ VARREDURA INICIADA — ${cityFull} | limite: ${max}`,'c');
   setStep(0);
-  es=new EventSource(`/api/scan?cidade=${encodeURIComponent(city)}&max_results=${max}`);
+  es=new EventSource(`/api/scan?cidade=${encodeURIComponent(cityFull)}&max_results=${max}`);
   es.onmessage=e=>{try{handle(JSON.parse(e.data))}catch{}};
   es.onerror=()=>{if(running)log('⚠ Reconectando...','a')}}
 
