@@ -252,6 +252,17 @@ async def _run_scan(cidade: str, max_results: int):
 # ROUTES
 # ─────────────────────────────────────────────────────────────────────────────
 
+@app.get("/api/version")
+async def version():
+    """Retorna o commit hash deployado — para confirmar que Railway está pegando o código do GitHub."""
+    import subprocess
+    try:
+        commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL).decode().strip()
+    except Exception:
+        commit = "unknown"
+    return {"commit": commit, "title": app.title}
+
+
 @app.get("/api/health")
 async def health():
     """Diagnóstico do ambiente — verifica Playwright browser e Chromium do sistema."""
