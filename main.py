@@ -409,6 +409,22 @@ async def _run_scan(cidade: str, max_results: int):
 # ROUTES
 # ─────────────────────────────────────────────────────────────────────────────
 
+@app.get("/api/clear-panel")
+async def clear_panel():
+    """Limpa o painel atual sem apagar o histórico."""
+    scan_state["leads"] = []
+    scan_state["stats"] = {"qualificados": 0, "descartados_site": 0, "descartados_ig": 0, "descartados_sem_contato": 0, "revisar": 0, "total": 0}
+    scan_state["scan_time"] = None
+    scan_state["_cidade"] = ""
+    scan_state["_log_buffer"] = []
+    for f in [LEADS_FILE, STATS_FILE]:
+        try:
+            f.unlink(missing_ok=True)
+        except Exception:
+            pass
+    return {"ok": True}
+
+
 @app.get("/api/reset")
 async def reset_all():
     """Zera todos os leads, histórico e known_leads."""

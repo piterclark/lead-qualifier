@@ -521,6 +521,7 @@ td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-ov
   <div class="v2-hdr">
     <button class="back-btn" onclick="goBack()">← Voltar</button>
     <button class="back-btn" onclick="openHistory()" style="border-color:rgba(245,158,11,.3);color:var(--amber)">🕐 Histórico</button>
+    <button class="back-btn" id="bclear" onclick="clearPanel()" style="border-color:rgba(239,68,68,.3);color:var(--red)">🗑 Limpar</button>
     <div class="v2-brand">J·A·R·V·I·S</div>
     <div class="v2-city" id="v2city">
       <div class="v2-cdot"></div>
@@ -747,6 +748,16 @@ document.getElementById('clk').textContent=new Date().toTimeString().slice(0,8);
 /* ── VIEW ──────────────────────────────────────────────────────── */
 function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('hidden',v.id!==id))}
 function goBack(){if(running)stopScan();showView('v1')}
+
+async function clearPanel(){
+  if(!confirm('Limpar o painel atual?\n\nOs leads serão removidos da tela, mas permanecem no Histórico.'))return;
+  await fetch('/api/clear-panel');
+  leads=[];updStats({});setStep(0);setRun(false);
+  document.getElementById('tbody').innerHTML='';
+  document.getElementById('srch').value='';
+  updCount();
+  document.getElementById('v2city').classList.remove('on');
+  log('◈ Painel limpo — histórico preservado.','a')}
 
 /* ── OPEN PANEL (sem varredura) ─────────────────────────────────── */
 async function openPanel(){
