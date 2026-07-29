@@ -1175,6 +1175,15 @@ function renderDrawerTable(idx,data,scanTime,cidade){
   return''}
 
 /* ── HISTORY DRAWER ─────────────────────────────────────────────── */
+async function trashScan(scanId, cidade){
+  if(!confirm(`Mover a varredura de "${cidade}" para a lixeira?\n\nEla será excluída do cruzamento de leads, mas pode ser restaurada.`))return;
+  await fetch(`/api/trash-scan/${scanId}`,{method:'POST'});
+  openHistory()}
+
+async function restoreScan(scanId){
+  await fetch(`/api/restore-scan/${scanId}`,{method:'POST'});
+  openHistory()}
+
 async function openHistory(){
   document.getElementById('histOverlay').classList.add('open');
   document.getElementById('histTs').textContent='Carregando...';
@@ -1184,9 +1193,10 @@ async function openHistory(){
     const r=await fetch('/api/history');
     const d=await r.json();
     const list=d.history||[];
+    const lixeira=d.trashed||[];
     document.getElementById('histBadge').textContent=`${list.length} varredura${list.length!==1?'s':''}`;
     document.getElementById('histTs').textContent=list.length?`Última: ${list[0].scan_time||'—'}`:'Nenhuma varredura encontrada';
-    document.getElementById('histBody').innerHTML=renderHistoryList(list);
+    document.getElementById('histBody').innerHTML=renderHistoryList(list,lixeira);
   }catch(e){
     document.getElementById('histTs').textContent='erro ao carregar';
     document.getElementById('histBody').innerHTML='<div class="empty"><div class="e-title">Erro ao buscar histórico</div></div>'}}
@@ -1195,40 +1205,47 @@ function closeHist(){document.getElementById('histOverlay').classList.remove('op
 
 function maybeCloseHist(e){if(e.target===document.getElementById('histOverlay'))closeHist()}
 
-function renderHistoryList(history){
-  if(!history||!history.length)return'<div class="hist-empty"><div style="font-size:28px;opacity:.3">🕐</div><div style="font-family:var(--m);font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase">Nenhuma varredura no histórico</div></div>';
-  const rows=history.map(s=>{
-    // Parse "Curitiba - PR" → município + estado
-    const cidParts=(s.cidade||'').split(' - ');
-    const estado=cidParts.length>1?cidParts[cidParts.length-1]:'—';
-    const municipio=cidParts.length>1?cidParts.slice(0,-1).join(' - '):(s.cidade||'—');
-    // Parse "12/07/2026 às 15:30" → data + hora
-    const tp=(s.scan_time||'').split(' às ');
-    const data=tp[0]||'—';const hora=tp[1]||'—';
-    const st=s.stats||{};
-    const q=st.qualificados||0,nd=(st.descartados_site||0)+(st.descartados_ig||0)+(st.descartados_sem_contato||0),rv=st.revisar||0,t=st.total||0;
-    const req=s.max_results||'—';
-    return`<tr>
-      <td style="font-weight:600;white-space:nowrap">${esc(municipio)}</td>
-      <td><span style="font-family:var(--m);font-size:10px;padding:2px 7px;border-radius:4px;background:var(--bg3);color:var(--text2)">${esc(estado)}</span></td>
-      <td><span style="font-family:var(--m);font-size:10px;color:var(--text2)">${esc(data)}</span></td>
-      <td><span style="font-family:var(--m);font-size:10px;color:var(--text3)">${esc(hora)}</span></td>
-      <td><span style="font-family:var(--m);font-size:10px;color:var(--text3)">${req}</span></td>
-      <td><span style="font-family:var(--m);font-size:11px;color:var(--text2)">${t}</span></td>
-      <td><span class="hchip g">✅ ${q}</span></td>
-      <td><span class="hchip r">❌ ${nd}</span></td>
-      <td><span class="hchip a">⚠ ${rv}</span></td>
-      <td>
-        <div style="display:flex;gap:6px;align-items:center">
-          <button class="hbtn" onclick="viewHistScan('${esc(s.id)}','${esc(s.cidade||'')}','${esc(s.scan_time||'')}')">↗ Ver</button>
-          <a class="hbtn dl" href="/api/history/${esc(s.id)}/export" download>⬇ CSV</a>
-        </div>
-      </td>
-    </tr>`}).join('');
-  return`<table class="hist-table"><thead><tr>
-    <th>Município</th><th>Estado</th><th>Data</th><th>Horário</th>
-    <th>Solicitados</th><th>Analisados</th><th>Qualif.</th><th>Descar.</th><th>Revisar</th><th>Ações</th>
-  </tr></thead><tbody>${rows}</tbody></table>`}
+function _histRow(s, inTrash=false){
+  const cidParts=(s.cidade||'').split(' - ');
+  const estado=cidParts.length>1?cidParts[cidParts.length-1]:'—';
+  const municipio=cidParts.length>1?cidParts.slice(0,-1).join(' - '):(s.cidade||'—');
+  const tp=(s.scan_time||'').split(' às ');
+  const data=tp[0]||'—';const hora=tp[1]||'—';
+  const st=s.stats||{};
+  const q=st.qualificados||0,nd=(st.descartados_site||0)+(st.descartados_ig||0)+(st.descartados_sem_contato||0),rv=st.revisar||0,t=st.total||0;
+  const req=s.max_results||'—';
+  const trashBtn=inTrash
+    ?`<button class="hbtn" title="Restaurar" onclick="restoreScan('${esc(s.id)}')">↩ Restaurar</button>`
+    :`<button class="hbtn" title="Mover para lixeira" style="border-color:rgba(239,68,68,.25);color:var(--red)" onclick="trashScan('${esc(s.id)}','${esc(s.cidade||'')}')">🗑</button>`;
+  const viewBtn=inTrash?'':`<button class="hbtn" onclick="viewHistScan('${esc(s.id)}','${esc(s.cidade||'')}','${esc(s.scan_time||'')}')">↗ Ver</button>`;
+  const csvBtn=`<a class="hbtn dl" href="/api/history/${esc(s.id)}/export" download>⬇ CSV</a>`;
+  return`<tr>
+    <td style="font-weight:600;white-space:nowrap">${esc(municipio)}</td>
+    <td><span style="font-family:var(--m);font-size:10px;padding:2px 7px;border-radius:4px;background:var(--bg3);color:var(--text2)">${esc(estado)}</span></td>
+    <td><span style="font-family:var(--m);font-size:10px;color:var(--text2)">${esc(data)}</span></td>
+    <td><span style="font-family:var(--m);font-size:10px;color:var(--text3)">${esc(hora)}</span></td>
+    <td><span style="font-family:var(--m);font-size:10px;color:var(--text3)">${req}</span></td>
+    <td><span style="font-family:var(--m);font-size:11px;color:var(--text2)">${t}</span></td>
+    <td><span class="hchip g">✅ ${q}</span></td>
+    <td><span class="hchip r">❌ ${nd}</span></td>
+    <td><span class="hchip a">⚠ ${rv}</span></td>
+    <td><div style="display:flex;gap:6px;align-items:center">${viewBtn}${csvBtn}${trashBtn}</div></td>
+  </tr>`}
+
+function renderHistoryList(history, trashed=[]){
+  const thead=`<thead><tr><th>Município</th><th>Estado</th><th>Data</th><th>Horário</th><th>Solicitados</th><th>Analisados</th><th>Qualif.</th><th>Descar.</th><th>Revisar</th><th>Ações</th></tr></thead>`;
+  const empty='<div class="hist-empty"><div style="font-size:28px;opacity:.3">🕐</div><div style="font-family:var(--m);font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase">Nenhuma varredura no histórico</div></div>';
+  const mainSection=history.length
+    ?`<table class="hist-table">${thead}<tbody>${history.map(s=>_histRow(s,false)).join('')}</tbody></table>`
+    :empty;
+  let trashSection='';
+  if(trashed.length){
+    trashSection=`<div style="margin-top:24px;border-top:1px solid var(--border);padding-top:16px">
+      <div style="font-family:var(--m);font-size:9px;color:var(--red);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">🗑 Lixeira (${trashed.length})</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Varreduras na lixeira não cruzam leads com novas buscas.</div>
+      <table class="hist-table">${thead}<tbody>${trashed.map(s=>_histRow(s,true)).join('')}</tbody></table>
+    </div>`}
+  return mainSection+trashSection}
 
 function renderHistDetail(scan){
   const st=scan.stats||{};

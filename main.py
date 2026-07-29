@@ -126,12 +126,12 @@ def _save_known_leads():
 
 def _save_to_history():
     """Persiste a varredura concluída no diretório de histórico."""
-    import time as _t
     if not scan_state["leads"]:
         return
-    scan_id = f"SCAN-{int(_t.time())}"
+    scan_id = scan_state.get("_scan_id") or f"SCAN-{int(__import__('time').time())}"
     entry = {
         "id": scan_id,
+        "trashed": False,
         "scan_time": scan_state.get("scan_time", "—"),
         "cidade": scan_state.get("_cidade", ""),
         "max_results": scan_state.get("_max_results", 0),
@@ -173,12 +173,14 @@ async def _run_scan(cidade: str, max_results: int):
     Sobrevive se o browser fechar; retoma ao reconectar.
     """
     try:
+        import time as _t0
         scan_state["running"] = True
         scan_state["stop_requested"] = False
         scan_state["leads"] = []
         scan_state["_log_buffer"] = []
         scan_state["_cidade"] = cidade
         scan_state["_max_results"] = max_results
+        scan_state["_scan_id"] = f"SCAN-{int(_t0.time())}"
         scan_state["scan_time"] = datetime.now().strftime("%d/%m/%Y às %H:%M")
         scan_state["stats"] = {
             "qualificados": 0, "descartados_site": 0,
@@ -208,6 +210,7 @@ async def _run_scan(cidade: str, max_results: int):
                     "status": lead.get("status", ""),
                     "cidade": scan_state.get("_cidade", ""),
                     "scan_time": scan_state.get("scan_time", ""),
+                    "scan_id": scan_state.get("_scan_id", ""),
                 }
             if len(scan_state["leads"]) % 10 == 0:
                 _save_to_disk()
@@ -427,8 +430,7 @@ async def clear_panel():
 
 @app.get("/api/reset")
 async def reset_all():
-    """Zera todos os leads, histórico e known_leads."""
-    import shutil
+    """Zera painel atual e known_leads — histórico NUNCA é apagado."""
     scan_state["leads"] = []
     scan_state["stats"] = {"qualificados": 0, "descartados_site": 0, "descartados_ig": 0, "descartados_sem_contato": 0, "revisar": 0, "total": 0}
     scan_state["scan_time"] = None
@@ -440,10 +442,55 @@ async def reset_all():
             f.unlink(missing_ok=True)
         except Exception:
             pass
-    if HISTORY_DIR.exists():
-        shutil.rmtree(HISTORY_DIR)
-        HISTORY_DIR.mkdir(exist_ok=True)
-    return {"ok": True, "msg": "Tudo zerado — leads, histórico e known_leads limpos."}
+    return {"ok": True, "msg": "Painel e known_leads zerados — histórico preservado."}
+
+
+@app.post("/api/trash-scan/{scan_id}")
+async def trash_scan(scan_id: str):
+    """Move varredura para lixeira e remove seus leads do known_leads."""
+    f = HISTORY_DIR / f"{scan_id}.json"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="Varredura não encontrada")
+    data = json.loads(f.read_text(encoding="utf-8"))
+    data["trashed"] = True
+    f.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    # Remove leads desta varredura do known_leads
+    removed = 0
+    for lead in data.get("leads", []):
+        phone = re.sub(r'\D', '', lead.get("phone", ""))
+        k = phone if len(phone) >= 8 else lead.get("name", "").lower().strip()
+        if k and k in known_leads and known_leads[k].get("scan_id") == scan_id:
+            del known_leads[k]
+            removed += 1
+    _save_known_leads()
+    return {"ok": True, "removed_from_known": removed}
+
+
+@app.post("/api/restore-scan/{scan_id}")
+async def restore_scan(scan_id: str):
+    """Restaura varredura da lixeira e re-adiciona leads ao known_leads."""
+    f = HISTORY_DIR / f"{scan_id}.json"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="Varredura não encontrada")
+    data = json.loads(f.read_text(encoding="utf-8"))
+    data["trashed"] = False
+    f.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    # Re-adiciona leads ao known_leads
+    added = 0
+    for lead in data.get("leads", []):
+        phone = re.sub(r'\D', '', lead.get("phone", ""))
+        k = phone if len(phone) >= 8 else lead.get("name", "").lower().strip()
+        if k and k not in known_leads:
+            known_leads[k] = {
+                "name": lead.get("name", ""),
+                "status": lead.get("status", ""),
+                "cidade": data.get("cidade", ""),
+                "scan_time": data.get("scan_time", ""),
+                "scan_id": scan_id,
+            }
+            added += 1
+    _save_known_leads()
+    return {"ok": True, "added_to_known": added}
 
 
 @app.get("/api/version")
@@ -787,21 +834,24 @@ async def export_csv(filter: str = "QUALIFICADO"):
 
 @app.get("/api/history")
 async def list_history():
-    """Lista todas as varreduras salvas (metadados apenas, sem leads)."""
-    entries = []
-    for f in sorted(HISTORY_DIR.glob("SCAN-*.json"), reverse=True)[:100]:
+    """Lista varreduras salvas separando ativas de lixeira."""
+    active, trashed = [], []
+    for f in sorted(HISTORY_DIR.glob("SCAN-*.json"), reverse=True)[:200]:
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
-            entries.append({
+            entry = {
                 "id": data["id"],
                 "scan_time": data.get("scan_time", "—"),
                 "cidade": data.get("cidade", "—"),
+                "max_results": data.get("max_results", 0),
                 "stats": data.get("stats", {}),
                 "total": len(data.get("leads", [])),
-            })
+                "trashed": data.get("trashed", False),
+            }
+            (trashed if data.get("trashed") else active).append(entry)
         except Exception:
             pass
-    return {"history": entries, "count": len(entries)}
+    return {"history": active, "trashed": trashed, "count": len(active)}
 
 
 @app.get("/api/history/{scan_id}")
