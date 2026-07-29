@@ -84,6 +84,7 @@ scan_state = {
     "_subscribers": [],      # asyncio.Queue por cliente SSE conectado
     "_log_buffer": [],       # últimos 300 logs para reconexão rápida
     "_cidade": "",
+    "_max_results": 0,
 }
 
 # Carregar leads salvos em sessão anterior (se existirem)
@@ -133,6 +134,7 @@ def _save_to_history():
         "id": scan_id,
         "scan_time": scan_state.get("scan_time", "—"),
         "cidade": scan_state.get("_cidade", ""),
+        "max_results": scan_state.get("_max_results", 0),
         "stats": dict(scan_state["stats"]),
         "leads": list(scan_state["leads"]),
     }
@@ -176,6 +178,7 @@ async def _run_scan(cidade: str, max_results: int):
         scan_state["leads"] = []
         scan_state["_log_buffer"] = []
         scan_state["_cidade"] = cidade
+        scan_state["_max_results"] = max_results
         scan_state["scan_time"] = datetime.now().strftime("%d/%m/%Y às %H:%M")
         scan_state["stats"] = {
             "qualificados": 0, "descartados_site": 0,

@@ -369,6 +369,22 @@ td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-ov
 .hchip.r{color:var(--red);background:var(--rdim)}
 .hchip.a{color:var(--amber);background:var(--adim)}
 .hchip.c{color:var(--cyan);background:var(--cdim)}
+.hscan-card{padding:16px 20px 14px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.hscan-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.hscan-loc{font-size:15px;font-weight:700;color:var(--text)}
+.hscan-uf{font-family:var(--m);font-size:9px;padding:1px 5px;border-radius:3px;background:var(--bg3);color:var(--text2);margin-left:6px;vertical-align:middle}
+.hscan-dt{font-family:var(--m);font-size:10px;color:var(--amber);text-align:right}
+.hscan-metrics{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.hscan-m{flex:1;padding:10px 8px;text-align:center;border-right:1px solid var(--border)}
+.hscan-m:last-child{border-right:none}
+.hscan-m.g .hscan-n{color:var(--green)}
+.hscan-m.r .hscan-n{color:var(--red)}
+.hscan-m.a .hscan-n{color:var(--amber)}
+.hscan-m.c .hscan-n{color:var(--cyan)}
+.hscan-n{display:block;font-family:var(--m);font-size:17px;font-weight:700;color:var(--text)}
+.hscan-l{display:block;font-family:var(--m);font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+.hback-btn{background:none;border:1px solid var(--border);color:var(--text2);font-family:var(--m);font-size:9px;padding:4px 10px;border-radius:4px;cursor:pointer;margin:12px 20px 0;display:inline-block;letter-spacing:.5px}
+.hback-btn:hover{border-color:var(--amber);color:var(--amber)}
 .hist-actions{display:flex;gap:8px}
 .hbtn{padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:transparent;
   color:var(--text2);font-family:var(--m);font-size:9px;letter-spacing:1px;cursor:pointer;
@@ -1178,15 +1194,17 @@ function renderHistoryList(history){
     const data=tp[0]||'—';const hora=tp[1]||'—';
     const st=s.stats||{};
     const q=st.qualificados||0,nd=(st.descartados_site||0)+(st.descartados_ig||0),rv=st.revisar||0,t=st.total||0;
+    const req=s.max_results||'—';
     return`<tr>
       <td style="font-weight:600;white-space:nowrap">${esc(municipio)}</td>
       <td><span style="font-family:var(--m);font-size:10px;padding:2px 7px;border-radius:4px;background:var(--bg3);color:var(--text2)">${esc(estado)}</span></td>
       <td><span style="font-family:var(--m);font-size:10px;color:var(--text2)">${esc(data)}</span></td>
       <td><span style="font-family:var(--m);font-size:10px;color:var(--text3)">${esc(hora)}</span></td>
+      <td><span style="font-family:var(--m);font-size:10px;color:var(--text3)">${req}</span></td>
+      <td><span style="font-family:var(--m);font-size:11px;color:var(--text2)">${t}</span></td>
       <td><span class="hchip g">✅ ${q}</span></td>
       <td><span class="hchip r">❌ ${nd}</span></td>
       <td><span class="hchip a">⚠ ${rv}</span></td>
-      <td><span style="font-family:var(--m);font-size:11px;color:var(--text2)">${t}</span></td>
       <td>
         <div style="display:flex;gap:6px;align-items:center">
           <button class="hbtn" onclick="viewHistScan('${esc(s.id)}','${esc(s.cidade||'')}','${esc(s.scan_time||'')}')">↗ Ver</button>
@@ -1196,24 +1214,68 @@ function renderHistoryList(history){
     </tr>`}).join('');
   return`<table class="hist-table"><thead><tr>
     <th>Município</th><th>Estado</th><th>Data</th><th>Horário</th>
-    <th>Qualif.</th><th>Descar.</th><th>Revisar</th><th>Total</th><th>Ações</th>
+    <th>Solicitados</th><th>Analisados</th><th>Qualif.</th><th>Descar.</th><th>Revisar</th><th>Ações</th>
   </tr></thead><tbody>${rows}</tbody></table>`}
 
+function renderHistDetail(scan){
+  const st=scan.stats||{};
+  const q=st.qualificados||0;
+  const nd=(st.descartados_site||0)+(st.descartados_ig||0);
+  const rv=st.revisar||0;
+  const total=st.total||0;
+  const req=scan.max_results||'—';
+  const taxa=total>0?Math.round(q/total*100):0;
+  const cidParts=(scan.cidade||'').split(' - ');
+  const estado=cidParts.length>1?cidParts[cidParts.length-1]:'';
+  const municipio=cidParts.length>1?cidParts.slice(0,-1).join(' - '):(scan.cidade||'—');
+  const back=`<button class="hback-btn" onclick="openHistory()">← Voltar ao histórico</button>`;
+  const card=`<div class="hscan-card">
+    <div class="hscan-head">
+      <div class="hscan-loc">${esc(municipio)}${estado?`<span class="hscan-uf">${esc(estado)}</span>`:''}</div>
+      <div class="hscan-dt">📅 ${esc(scan.scan_time||'—')}</div>
+    </div>
+    <div class="hscan-metrics">
+      <div class="hscan-m"><span class="hscan-n">${req}</span><span class="hscan-l">Solicitados</span></div>
+      <div class="hscan-m"><span class="hscan-n">${total}</span><span class="hscan-l">Analisados</span></div>
+      <div class="hscan-m g"><span class="hscan-n">${q}</span><span class="hscan-l">✅ Qualif.</span></div>
+      <div class="hscan-m r"><span class="hscan-n">${nd}</span><span class="hscan-l">❌ Descar.</span></div>
+      <div class="hscan-m a"><span class="hscan-n">${rv}</span><span class="hscan-l">⚠ Revisar</span></div>
+      <div class="hscan-m c"><span class="hscan-n">${taxa}%</span><span class="hscan-l">Taxa qualif.</span></div>
+    </div>
+  </div>`;
+  const llist=scan.leads||[];
+  if(!llist.length)return back+card+'<div class="empty">Sem leads registrados</div>';
+  const rows=llist.map(l=>{
+    const bc=l.status==='QUALIFICADO'?'bq':l.status==='REVISAR'?'br':'bd';
+    const bt=l.status==='QUALIFICADO'?'✅ Qualif.':l.status==='REVISAR'?'⚠ Revisar':'❌ Descar.';
+    const digs=(l.phone||'').replace(/\D/g,'');
+    const n=digs.startsWith('55')?digs:'55'+digs;
+    const wa=l.phone?`<a class="wa" href="https://wa.me/${n}" target="_blank">📱 ${esc(l.phone)}</a>`:'<span class="muted">—</span>';
+    const ig=l.instagram?`<a class="ig-user" href="https://instagram.com/${esc(l.instagram)}" target="_blank">@${esc(l.instagram)}</a>`:'<span class="muted">—</span>';
+    return`<tr>
+      <td><span class="badge ${bc}">${bt}</span></td>
+      <td style="font-weight:500;white-space:nowrap">${esc(l.name||'—')}${prevBadge(l.previous_result)}</td>
+      <td>${wa}</td>
+      <td>${ig}</td>
+      <td style="color:var(--text3);font-size:10px">${esc(l.motivo||'—')}</td>
+    </tr>`}).join('');
+  return back+card+`<table><thead><tr><th>Status</th><th>Nome</th><th>Telefone</th><th>Instagram</th><th>Motivo</th></tr></thead><tbody>${rows}</tbody></table>`}
+
 async function viewHistScan(scanId,cidade,scanTime){
-  closeHist();showView('v2');
+  document.getElementById('histBody').innerHTML='<div class="empty"><div class="e-ico">⏳</div><div class="e-title">Carregando varredura...</div></div>';
+  document.getElementById('histBadge').textContent='...';
+  document.getElementById('histTs').textContent='aguarde';
   try{
     const r=await fetch(`/api/history/${scanId}`);
     const d=await r.json();
-    if(d.leads&&d.leads.length){
-      leads=d.leads;
-      const city=d.cidade||cidade||'';
-      if(city){
-        document.getElementById('v2city-txt').textContent='⊙ '+city.toUpperCase();
-        document.getElementById('v2city').classList.add('on')}
-      updStats(d.stats||{});setStep(4);setRun(false,city);renderTable();
-      log(`◈ HISTÓRICO — ${d.scan_time||scanTime} | ${d.leads.length} leads`,'a');
-    }else{setRun(false);log('◈ Varredura vazia no histórico','a')}
-  }catch(e){log('◈ Erro ao carregar varredura do histórico','r')}}
+    const cidParts=(d.cidade||cidade||'').split(' - ');
+    const municipio=cidParts.length>1?cidParts.slice(0,-1).join(' - '):(d.cidade||cidade||'—');
+    document.getElementById('histBadge').textContent=`${(d.leads||[]).length} leads`;
+    document.getElementById('histTs').textContent=municipio+' · '+(d.scan_time||scanTime||'—');
+    document.getElementById('histBody').innerHTML=renderHistDetail(d);
+  }catch(e){
+    document.getElementById('histTs').textContent='erro';
+    document.getElementById('histBody').innerHTML='<div class="empty"><div class="e-title">Erro ao carregar varredura</div></div>'}}
 </script>
 </body>
 </html>
