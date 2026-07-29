@@ -364,6 +364,27 @@ async def _run_scan(cidade: str, max_results: int):
 # ROUTES
 # ─────────────────────────────────────────────────────────────────────────────
 
+@app.get("/api/reset")
+async def reset_all():
+    """Zera todos os leads, histórico e known_leads."""
+    import shutil
+    scan_state["leads"] = []
+    scan_state["stats"] = {"qualificados": 0, "descartados_site": 0, "descartados_ig": 0, "revisar": 0, "total": 0}
+    scan_state["scan_time"] = None
+    scan_state["_cidade"] = ""
+    scan_state["_log_buffer"] = []
+    known_leads.clear()
+    for f in [LEADS_FILE, STATS_FILE, KNOWN_LEADS_FILE]:
+        try:
+            f.unlink(missing_ok=True)
+        except Exception:
+            pass
+    if HISTORY_DIR.exists():
+        shutil.rmtree(HISTORY_DIR)
+        HISTORY_DIR.mkdir(exist_ok=True)
+    return {"ok": True, "msg": "Tudo zerado — leads, histórico e known_leads limpos."}
+
+
 @app.get("/api/version")
 async def version():
     """Retorna o commit hash deployado — para confirmar que Railway está pegando o código do GitHub."""
