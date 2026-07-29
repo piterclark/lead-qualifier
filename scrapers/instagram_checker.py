@@ -1,4 +1,3 @@
-import re
 import instaloader
 
 
@@ -7,7 +6,9 @@ _AUTHORITY_KEYWORDS = [
     "agenda fechada", "agenda lotada", "mais de", "atendo",
     "dra.", "dr.", "pós-graduada", "pós graduada", "mestrado",
     "doutorado", "supervisão", "supervisao", "formação", "formacao",
-    "crp", "coorientadora", "professora", "psicóloga clínica", "psicologa clinica",
+    "coren", "crefito", "esteticista clínica", "esteticista clinica",
+    "dermato funcional", "skincare", "harmonização facial", "harmonizacao facial",
+    "radiofrequência", "radiofrequencia", "linfodrenagem", "bioestimulador",
 ]
 
 _LINKTREE_KEYWORDS = [

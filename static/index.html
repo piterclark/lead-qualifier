@@ -421,7 +421,7 @@ td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-ov
         <div class="logo-big-core"></div>
       </div>
       <div class="config-title">J · A · R · V · I · S</div>
-      <div class="config-sub">LEAD QUALIFIER · PSICÓLOGOS · v2.1</div>
+      <div class="config-sub">LEAD QUALIFIER · ESTETICISTAS · v2.1</div>
     </div>
     <div class="config-body">
       <div class="mtabs">
@@ -521,7 +521,7 @@ td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-ov
       </div>
       <div class="step-info">
         <div class="step-name">Google Maps</div>
-        <div class="step-desc" id="s0-desc">Buscando psicólogos</div>
+        <div class="step-desc" id="s0-desc">Buscando esteticistas</div>
       </div>
       <span class="step-click-hint">clique ↗</span>
     </div>
@@ -772,7 +772,7 @@ function setStep(n){
     el.className='step'+(i<n?' done':i===n?' active':'')}}
 
 function detectStep(msg){
-  if(/maps|google|buscando psicólogos|varrendo/i.test(msg))return 0;
+  if(/maps|google|buscando esteticistas|varrendo/i.test(msg))return 0;
   if(/site|presença web|http/i.test(msg))return 1;
   if(/instagram|ig\b|seguidores|@/i.test(msg))return 2;
   if(/qualificado|descartado|revisar|concluíd/i.test(msg))return 3;
@@ -891,7 +891,7 @@ function reset(city=''){
   document.getElementById('srch').value='';
   document.getElementById('pfill').style.width='0%';
   for(let i=0;i<4;i++){document.getElementById('s'+i).className='step'}
-  setStepDesc(0,'Buscando psicólogos');setStepDesc(1,'Verificando presença web');
+  setStepDesc(0,'Buscando esteticistas');setStepDesc(1,'Verificando presença web');
   setStepDesc(2,'Checando seguidores');setStepDesc(3,'Classificando leads');
   term.innerHTML='';scanStart=Date.now();clearInterval(lpmTick);
   document.getElementById('ts').innerHTML='<div class="empty"><div class="e-ico">⏳</div><div class="e-title">Iniciando Varredura</div><div class="e-sub">Os leads aparecerão aqui em tempo real</div></div>'}
@@ -1065,7 +1065,7 @@ function makeBanner(cidade,scanTime){
   const timeLabel=tp.length>1?`${tp[0]} · ${tp[1]}`:(scanTime||'');
   if(!cidade&&!scanTime)return'';
   return`<div class="dcb">
-    <span class="dcb-tag">LEADS PSICÓLOGOS</span>
+    <span class="dcb-tag">LEADS ESTETICISTAS</span>
     <div class="dcb-div"></div>
     <span class="dcb-city">${esc(city||cidade||'—')}</span>
     ${uf?`<span class="dcb-uf">${esc(uf)}</span>`:''}

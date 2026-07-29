@@ -17,7 +17,7 @@ from scrapers.maps_scraper import scrape_maps
 from scrapers.site_checker import check_site
 from scrapers.instagram_checker import check_instagram
 
-app = FastAPI(title="Lead Qualifier — Psicólogos")
+app = FastAPI(title="Lead Qualifier — Esteticistas")
 
 # ── Browser download state ────────────────────────────────────────────────────
 _browser_state: dict = {"status": "unknown", "error": None}
@@ -177,7 +177,7 @@ async def _run_scan(cidade: str, max_results: int):
             if len(scan_state["leads"]) % 10 == 0:
                 _save_to_disk()
 
-        log(f"◈ SISTEMA INICIADO — buscando psicólogos em {cidade}")
+        log(f"◈ SISTEMA INICIADO — buscando esteticistas em {cidade}")
         log("◈ Abrindo Google Maps (modo stealth)...")
 
         results_queue: asyncio.Queue = asyncio.Queue()
@@ -187,7 +187,7 @@ async def _run_scan(cidade: str, max_results: int):
 
         maps_task = asyncio.create_task(
             scrape_maps(
-                search_term=f"psicóloga {cidade}",
+                search_term=f"esteticista {cidade}",
                 max_results=max_results,
                 on_result=maps_callback,
             )
