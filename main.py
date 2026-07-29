@@ -1,4 +1,5 @@
 import os
+import re
 import asyncio
 import csv
 import io
@@ -65,6 +66,7 @@ DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 HISTORY_DIR = DATA_DIR / "history"
 HISTORY_DIR.mkdir(exist_ok=True)
+KNOWN_LEADS_FILE = DATA_DIR / "known_leads.json"
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
@@ -98,11 +100,25 @@ if STATS_FILE.exists():
     except Exception:
         pass
 
+known_leads: dict = {}
+if KNOWN_LEADS_FILE.exists():
+    try:
+        known_leads = json.loads(KNOWN_LEADS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+
 
 def _save_to_disk():
     try:
         LEADS_FILE.write_text(json.dumps(scan_state["leads"], ensure_ascii=False, indent=2), encoding="utf-8")
         STATS_FILE.write_text(json.dumps(scan_state["stats"], ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _save_known_leads():
+    try:
+        KNOWN_LEADS_FILE.write_text(json.dumps(known_leads, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
         pass
 
@@ -170,12 +186,29 @@ async def _run_scan(cidade: str, max_results: int):
             _broadcast({"type": "log", "msg": msg})
 
         def push_lead(lead: dict):
+            phone = re.sub(r'\D', '', lead.get("phone", ""))
+            k = phone if len(phone) >= 8 else lead.get("name", "").lower().strip()
+            if k and k in known_leads:
+                prev = known_leads[k]
+                lead["previous_result"] = {
+                    "status": prev.get("status"),
+                    "cidade": prev.get("cidade"),
+                    "scan_time": prev.get("scan_time"),
+                }
             scan_state["leads"].append(lead)
             scan_state["stats"]["total"] += 1
             _broadcast({"type": "lead", "lead": lead})
             _broadcast({"type": "stats", "stats": dict(scan_state["stats"])})
+            if k:
+                known_leads[k] = {
+                    "name": lead.get("name", ""),
+                    "status": lead.get("status", ""),
+                    "cidade": scan_state.get("_cidade", ""),
+                    "scan_time": scan_state.get("scan_time", ""),
+                }
             if len(scan_state["leads"]) % 10 == 0:
                 _save_to_disk()
+                _save_known_leads()
 
         log(f"◈ SISTEMA INICIADO — buscando esteticistas em {cidade}")
         log("◈ Abrindo Google Maps (modo stealth)...")
@@ -309,6 +342,7 @@ async def _run_scan(cidade: str, max_results: int):
             log(f"◈ ERRO NO PRODUTOR: {type(e).__name__}: {e}")
 
         _save_to_disk()
+        _save_known_leads()
         _save_to_history()
         scan_state["running"] = False
         _broadcast({"type": "complete", "stats": dict(scan_state["stats"])})

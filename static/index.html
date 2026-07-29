@@ -254,6 +254,10 @@ td{padding:9px 12px;font-size:11px;vertical-align:middle;overflow:hidden;text-ov
 .ig-seg.weak{color:var(--green);background:var(--gdim)}
 .ig-seg.none{color:var(--text3);font-size:8px}
 .ig-seg.unchecked{color:var(--text3);background:var(--bg3)}
+.prev-tag{display:inline-block;font-family:var(--m);font-size:9px;padding:1px 5px;border-radius:3px;margin-top:3px;font-weight:600;letter-spacing:.3px}
+.prev-tag.pq{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.2)}
+.prev-tag.pr{background:var(--adim);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.prev-tag.pd{background:var(--rdim);color:var(--red);border:1px solid rgba(244,63,94,.2)}
 
 .wa{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:5px;
   background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.2);
@@ -963,6 +967,15 @@ function renderTable(){
 function shortDomain(url){
   try{return new URL(url).hostname.replace(/^www\./,'').slice(0,22)}catch{return url.slice(0,22)}}
 
+function prevBadge(p){
+  if(!p)return'';
+  const cls=p.status==='QUALIFICADO'?'pq':p.status==='REVISAR'?'pr':'pd';
+  const lbl=p.status==='QUALIFICADO'?'✅ Qualif.':p.status==='REVISAR'?'⚠ Revisar':'❌ Descar.';
+  const dt=(p.scan_time||'').split(' às ')[0]||'';
+  const cid=(p.cidade||'').split(' - ')[0]||'';
+  const info=[lbl,dt,cid].filter(Boolean).join(' · ');
+  return`<div><span class="prev-tag ${cls}">↩ ${info}</span></div>`}
+
 function mkRow(l){
   const tr=document.createElement('tr');
   const bc=l.status==='QUALIFICADO'?'bq':l.status==='REVISAR'?'br':'bd';
@@ -1003,7 +1016,7 @@ function mkRow(l){
 
   tr.innerHTML=`
     <td><span class="badge ${bc}">${bt}</span></td>
-    <td title="${esc(l.name||'')}" style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.name||'—')}</td>
+    <td title="${esc(l.name||'')}" style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.name||'—')}${prevBadge(l.previous_result)}</td>
     <td>${phoneHtml}</td>
     <td>${siteHtml}</td>
     <td>${igHtml}</td>
@@ -1124,7 +1137,7 @@ function renderDrawerTable(idx,data,scanTime,cidade){
       const wa=l.phone?`<a class="wa" href="https://wa.me/${n}" target="_blank">📱 ${esc(l.phone)}</a>`:'<span class="muted">—</span>';
       return`<tr>
         <td><span class="badge ${bc}">${bt}</span></td>
-        <td style="font-weight:500;white-space:nowrap">${esc(l.name||'—')}</td>
+        <td style="font-weight:500;white-space:nowrap">${esc(l.name||'—')}${prevBadge(l.previous_result)}</td>
         <td>${wa}</td>
         <td style="color:var(--text3);font-size:10px">${esc(l.motivo||'—')}</td>
       </tr>`}).join('');
