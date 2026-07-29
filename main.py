@@ -181,22 +181,55 @@ async def _run_scan(cidade: str, max_results: int):
         log("◈ Abrindo Google Maps (modo stealth)...")
 
         results_queue: asyncio.Queue = asyncio.Queue()
+        seen_phones: set = set()
+        _DONE = object()
+
+        SEARCH_TERMS = [
+            "esteticista",
+            "clínica de estética",
+            "studio de estética",
+            "salão de estética",
+        ]
+
+        def _dedup_key(lead: dict) -> str:
+            import re as _re
+            phone = _re.sub(r'\D', '', lead.get("phone", ""))
+            return phone if len(phone) >= 8 else lead.get("name", "").lower().strip()
 
         async def maps_callback(lead: dict):
+            key = _dedup_key(lead)
+            if key and key in seen_phones:
+                return
+            if key:
+                seen_phones.add(key)
             await results_queue.put(lead)
 
-        maps_task = asyncio.create_task(
-            scrape_maps(
-                search_term=f"esteticista {cidade}",
-                max_results=max_results,
-                on_result=maps_callback,
-            )
-        )
+        async def producer():
+            n = len(SEARCH_TERMS)
+            for i, term in enumerate(SEARCH_TERMS, 1):
+                if scan_state["stop_requested"] or len(scan_state["leads"]) >= max_results:
+                    break
+                full_term = f"{term} {cidade}"
+                log(f"◈ [{i}/{n}] Buscando: «{full_term}»...")
+                try:
+                    await scrape_maps(
+                        search_term=full_term,
+                        max_results=max_results,
+                        on_result=maps_callback,
+                    )
+                except asyncio.CancelledError:
+                    raise
+                except Exception as e:
+                    log(f"◈ Aviso — erro no termo «{term}»: {type(e).__name__}: {e}")
+                log(f"◈ Termo {i}/{n} concluído — {len(seen_phones)} locais únicos encontrados")
+            await results_queue.put(_DONE)
+
+        producer_task = asyncio.create_task(producer())
 
         processed = 0
-        while not maps_task.done() or not results_queue.empty():
+        while True:
             if scan_state["stop_requested"]:
-                maps_task.cancel()
+                producer_task.cancel()
                 log("◈ Varredura interrompida pelo operador.")
                 break
 
@@ -205,8 +238,15 @@ async def _run_scan(cidade: str, max_results: int):
             except asyncio.TimeoutError:
                 continue
 
+            if lead is _DONE:
+                break
+
+            if len(scan_state["leads"]) >= max_results:
+                producer_task.cancel()
+                break
+
             processed += 1
-            log(f"  → [{processed}/{max_results}] Analisando: {lead.get('name', '?')}")
+            log(f"  → [{processed}] Analisando: {lead.get('name', '?')}")
 
             # Etapa 2: site
             if lead.get("website"):
@@ -262,11 +302,11 @@ async def _run_scan(cidade: str, max_results: int):
             push_lead(lead)
 
         try:
-            await maps_task
+            await producer_task
         except asyncio.CancelledError:
             pass
         except Exception as e:
-            log(f"◈ ERRO MAPS SCRAPER: {type(e).__name__}: {e}")
+            log(f"◈ ERRO NO PRODUTOR: {type(e).__name__}: {e}")
 
         _save_to_disk()
         _save_to_history()
