@@ -78,7 +78,7 @@ scan_state = {
     "running": False,
     "stop_requested": False,
     "leads": [],
-    "stats": {"qualificados": 0, "descartados_site": 0, "descartados_ig": 0, "revisar": 0, "total": 0},
+    "stats": {"qualificados": 0, "descartados_site": 0, "descartados_ig": 0, "descartados_sem_contato": 0, "revisar": 0, "total": 0},
     "scan_time": None,       # "dd/mm/yyyy às HH:MM" — exibido no drawer de cada step
     "_task": None,           # asyncio.Task — persiste mesmo sem clientes SSE
     "_subscribers": [],      # asyncio.Queue por cliente SSE conectado
@@ -284,23 +284,38 @@ async def _run_scan(cidade: str, max_results: int):
             processed += 1
             log(f"  → [{processed}] Analisando: {lead.get('name', '?')}")
 
-            # Etapa 2: site
-            if lead.get("website"):
+            # ── Detectar site que é na verdade uma rede social ──────────────
+            _website = lead.get("website", "")
+            _is_social = False
+            if _website:
+                _wl = _website.lower()
+                if "instagram.com" in _wl:
+                    # Extrair @username do link do Instagram cadastrado como site
+                    _m = re.search(r'instagram\.com/([^/?#\s]+)', _website, re.IGNORECASE)
+                    if _m:
+                        _ig_slug = _m.group(1).strip('/').strip()
+                        _blocked = {'p', 'reel', 'reels', 'explore', 'stories', 'tv', 'accounts', 'ar', 'web'}
+                        if _ig_slug and _ig_slug.lower() not in _blocked:
+                            lead["instagram"] = lead.get("instagram") or _ig_slug
+                    _is_social = True
+                elif any(s in _wl for s in ("facebook.com", "fb.com", "linktr.ee", "wa.me", "whatsapp.com", "tiktok.com")):
+                    _is_social = True
+
+            # ── Etapa 2: site real ───────────────────────────────────────────
+            if lead.get("website") and not _is_social:
                 site_result = await check_site(lead["website"])
-                lead["site_alive"] = site_result["alive"]  # sempre persiste para o drawer
+                lead["site_alive"] = site_result["alive"]
                 if site_result["alive"]:
                     lead["status"] = "DESCARTADO"
-                    lead["motivo"] = "Possui site"
+                    lead["motivo"] = f"Possui site ({lead['website']})"
                     scan_state["stats"]["descartados_site"] += 1
                     push_lead(lead)
                     continue
-                # Site offline mas pode ter Instagram linkado
                 if site_result["instagram"] and not lead.get("instagram"):
                     lead["instagram"] = site_result["instagram"]
 
-            # Etapa 3: Instagram
-            # Tenta encontrar Instagram no site se ainda não achou no Maps
-            if not lead.get("instagram") and lead.get("website"):
+            # ── Etapa 3: Instagram ───────────────────────────────────────────
+            if not lead.get("instagram") and lead.get("website") and not _is_social:
                 site_result = await check_site(lead["website"])
                 if site_result["instagram"]:
                     lead["instagram"] = site_result["instagram"]
@@ -313,6 +328,17 @@ async def _run_scan(cidade: str, max_results: int):
                 lead["ig_followers"] = ig_result.get("followers", 0)
                 lead["ig_bio"] = ig_result.get("bio", "")[:120]
                 lead["ig_url"] = f"https://instagram.com/{ig_username}"
+
+                # Tentar extrair telefone da bio se o Maps não tinha
+                if not lead.get("phone") and ig_result.get("bio"):
+                    _bio = ig_result["bio"]
+                    _pm = re.search(r'(\+?[\d][\d\s\(\)\-]{6,}[\d])', _bio)
+                    if _pm:
+                        _digits = re.sub(r'\D', '', _pm.group(1))
+                        if 8 <= len(_digits) <= 15:
+                            lead["phone"] = _pm.group(1).strip()
+                            lead["phone_source"] = "bio_instagram"
+                            log(f"    → 📱 Telefone extraído da bio do IG: {lead['phone']}")
 
                 if ig_result.get("strong_positioning"):
                     lead["status"] = "DESCARTADO"
@@ -328,12 +354,28 @@ async def _run_scan(cidade: str, max_results: int):
                     push_lead(lead)
                     continue
 
-            # Qualificado
+            # ── Regra mínima de contato ──────────────────────────────────────
+            _has_phone = bool(re.sub(r'\D', '', lead.get("phone", "")))
+            _has_contact = _has_phone or bool(ig_username)
+            if not _has_contact:
+                lead["status"] = "DESCARTADO"
+                lead["motivo"] = "Sem contato (sem telefone e sem Instagram)"
+                scan_state["stats"]["descartados_sem_contato"] += 1
+                push_lead(lead)
+                continue
+
+            # ── Qualificado ──────────────────────────────────────────────────
+            _contato_parts = []
+            if not lead.get("website") or _is_social:
+                _contato_parts.append("sem site")
+            if ig_username:
+                _contato_parts.append(f"IG fraco (@{ig_username})")
+            elif not lead.get("phone"):
+                _contato_parts.append("sem Instagram")
+            if lead.get("phone_source") == "bio_instagram":
+                _contato_parts.append("tel. via bio IG")
             lead["status"] = "QUALIFICADO"
-            lead["motivo"] = (
-                "Sem site" +
-                (f" — IG fraco (@{ig_username})" if ig_username else " e sem Instagram")
-            )
+            lead["motivo"] = " — ".join(_contato_parts) if _contato_parts else "sem site e sem Instagram"
             scan_state["stats"]["qualificados"] += 1
             push_lead(lead)
 
@@ -372,7 +414,7 @@ async def reset_all():
     """Zera todos os leads, histórico e known_leads."""
     import shutil
     scan_state["leads"] = []
-    scan_state["stats"] = {"qualificados": 0, "descartados_site": 0, "descartados_ig": 0, "revisar": 0, "total": 0}
+    scan_state["stats"] = {"qualificados": 0, "descartados_site": 0, "descartados_ig": 0, "descartados_sem_contato": 0, "revisar": 0, "total": 0}
     scan_state["scan_time"] = None
     scan_state["_cidade"] = ""
     scan_state["_log_buffer"] = []

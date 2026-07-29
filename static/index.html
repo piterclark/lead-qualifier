@@ -928,7 +928,7 @@ function setRun(on,city=''){
   if(on){lpmTick=setInterval(()=>{},5000)}else clearInterval(lpmTick)}
 
 function updStats(s){
-  const nq=s.qualificados||0,nd=(s.descartados_site||0)+(s.descartados_ig||0),nr=s.revisar||0,nt=s.total||0;
+  const nq=s.qualificados||0,nd=(s.descartados_site||0)+(s.descartados_ig||0)+(s.descartados_sem_contato||0),nr=s.revisar||0,nt=s.total||0;
   anim('nq','q',nq);anim('nd','d',nd);anim('nr','r',nr);anim('nt','t',nt);
   const pct=nt>0?Math.round(nq/nt*100):0;
   document.getElementById('qrate').textContent=`${pct}% qualificação`;
@@ -998,11 +998,12 @@ function mkRow(l){
   const bt=l.status==='QUALIFICADO'?'✅ Qualificado':l.status==='REVISAR'?'⚠ Revisar':'❌ Descartado';
 
   // Telefone / WhatsApp
-  let phoneHtml='<span class="muted">—</span>';
+  let phoneHtml='<span class="muted" title="Não cadastrado no Google Maps">sem tel.</span>';
   if(l.phone){
     const d=l.phone.replace(/\D/g,'');
     const n=d.startsWith('55')?d:'55'+d;
-    phoneHtml=`<a class="wa" href="https://wa.me/${n}" target="_blank">📱 ${esc(l.phone)}</a>`}
+    const src=l.phone_source==='bio_instagram'?'<span class="prev-tag pq" style="margin-left:4px;vertical-align:middle">via IG</span>':'';
+    phoneHtml=`<a class="wa" href="https://wa.me/${n}" target="_blank">📱 ${esc(l.phone)}</a>${src}`}
 
   // Site — mostra URL + tag ATIVO/INATIVO/NÃO ENCONTRADO
   let siteHtml='<span class="muted site-tag none">não encontrado</span>';
@@ -1150,7 +1151,8 @@ function renderDrawerTable(idx,data,scanTime,cidade){
       const bt=l.status==='QUALIFICADO'?'✅ Qualificado':l.status==='REVISAR'?'⚠ Revisar':'❌ Descartado';
       const digs=(l.phone||'').replace(/\D/g,'');
       const n=digs.startsWith('55')?digs:'55'+digs;
-      const wa=l.phone?`<a class="wa" href="https://wa.me/${n}" target="_blank">📱 ${esc(l.phone)}</a>`:'<span class="muted">—</span>';
+      const src=l.phone_source==='bio_instagram'?'<span class="prev-tag pq" style="margin-left:4px;vertical-align:middle">via IG</span>':'';
+      const wa=l.phone?`<a class="wa" href="https://wa.me/${n}" target="_blank">📱 ${esc(l.phone)}</a>${src}`:'<span class="muted" title="Não cadastrado no Google Maps">sem tel.</span>';
       return`<tr>
         <td><span class="badge ${bc}">${bt}</span></td>
         <td style="font-weight:500;white-space:nowrap">${esc(l.name||'—')}${prevBadge(l.previous_result)}</td>
@@ -1193,7 +1195,7 @@ function renderHistoryList(history){
     const tp=(s.scan_time||'').split(' às ');
     const data=tp[0]||'—';const hora=tp[1]||'—';
     const st=s.stats||{};
-    const q=st.qualificados||0,nd=(st.descartados_site||0)+(st.descartados_ig||0),rv=st.revisar||0,t=st.total||0;
+    const q=st.qualificados||0,nd=(st.descartados_site||0)+(st.descartados_ig||0)+(st.descartados_sem_contato||0),rv=st.revisar||0,t=st.total||0;
     const req=s.max_results||'—';
     return`<tr>
       <td style="font-weight:600;white-space:nowrap">${esc(municipio)}</td>
@@ -1220,7 +1222,7 @@ function renderHistoryList(history){
 function renderHistDetail(scan){
   const st=scan.stats||{};
   const q=st.qualificados||0;
-  const nd=(st.descartados_site||0)+(st.descartados_ig||0);
+  const nd=(st.descartados_site||0)+(st.descartados_ig||0)+(st.descartados_sem_contato||0);
   const rv=st.revisar||0;
   const total=st.total||0;
   const req=scan.max_results||'—';
