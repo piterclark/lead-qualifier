@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-_PB_PATH = "/app/playwright-browsers"
+_PB_PATH = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/app/playwright-browsers")
 os.environ["PLAYWRIGHT_BROWSERS_PATH"] = _PB_PATH
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Query
