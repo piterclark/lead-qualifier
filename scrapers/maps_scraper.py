@@ -1,5 +1,4 @@
 import glob as _glob
-import os
 import re
 import shutil
 from typing import Callable
@@ -62,11 +61,6 @@ async def scrape_maps(search_term: str, max_results: int, on_result: Callable) -
         )
         # Remove webdriver flag para evitar detecção de bot
         await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        # Bloquear imagens, fontes e media para carregar páginas mais rápido
-        await context.route(
-            "**/*.{png,jpg,jpeg,gif,svg,webp,ico,woff,woff2,ttf,mp4,mp3}",
-            lambda route: route.abort()
-        )
         page = await context.new_page()
 
         encoded = search_term.replace(" ", "+")
