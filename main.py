@@ -920,14 +920,30 @@ async def step_data(step: str):
     return {"step": step, "scan_time": scan_time, "cidade": cidade, "total": len(data), "data": data}
 
 
+def _wa_link(phone: str) -> str:
+    """Gera link wa.me a partir de um número de telefone."""
+    if not phone:
+        return ""
+    d = re.sub(r'\D', '', phone)
+    if not d:
+        return ""
+    if d.startswith('55') and len(d) >= 12:
+        n = d
+    elif d.startswith('0'):
+        n = '55' + d[1:]
+    else:
+        n = '55' + d
+    return f"https://wa.me/{n}"
+
+
 @app.get("/api/export")
 async def export_csv(filter: str = "QUALIFICADO"):
     leads = scan_state["leads"]
     if filter != "ALL":
         leads = [l for l in leads if l.get("status") == filter]
 
-    fieldnames = ["name", "phone", "address", "website", "instagram", "ig_url",
-                  "ig_followers", "ig_bio", "status", "motivo", "rating"]
+    fieldnames = ["name", "phone", "whatsapp_link", "address", "website", "instagram",
+                  "ig_url", "ig_followers", "ig_bio", "status", "motivo", "rating"]
 
     def _clean(row: dict) -> dict:
         cleaned = {}
@@ -935,6 +951,7 @@ async def export_csv(filter: str = "QUALIFICADO"):
             if isinstance(v, str):
                 v = v.replace("\r\n", " ").replace("\r", " ").replace("\n", " ").strip()
             cleaned[k] = v
+        cleaned["whatsapp_link"] = _wa_link(cleaned.get("phone", ""))
         return cleaned
 
     output = io.StringIO()
@@ -1043,8 +1060,8 @@ async def export_history_csv(scan_id: str):
     date_slug = (data.get("scan_time") or "").replace("/", "").replace(":", "").replace(" ", "-").replace("às", "")[:14]
     filename = f"leads-{cidade_slug}-{date_slug}.csv".strip("-")
 
-    fieldnames = ["name", "phone", "address", "website", "instagram", "ig_url",
-                  "ig_followers", "ig_bio", "status", "motivo", "rating"]
+    fieldnames = ["name", "phone", "whatsapp_link", "address", "website", "instagram",
+                  "ig_url", "ig_followers", "ig_bio", "status", "motivo", "rating"]
 
     def _clean(row: dict) -> dict:
         cleaned = {}
@@ -1052,6 +1069,7 @@ async def export_history_csv(scan_id: str):
             if isinstance(v, str):
                 v = v.replace("\r\n", " ").replace("\r", " ").replace("\n", " ").strip()
             cleaned[k] = v
+        cleaned["whatsapp_link"] = _wa_link(cleaned.get("phone", ""))
         return cleaned
 
     output = io.StringIO()
