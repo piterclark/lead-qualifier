@@ -29,6 +29,14 @@ _LAUNCH_ARGS = [
     "--disable-setuid-sandbox",
     "--disable-gpu",
     "--disable-blink-features=AutomationControlled",
+    "--disable-extensions",
+    "--disable-default-apps",
+    "--disable-background-networking",
+    "--disable-sync",
+    "--disable-translate",
+    "--hide-scrollbars",
+    "--mute-audio",
+    "--no-first-run",
 ]
 
 _USER_AGENTS = [
@@ -54,6 +62,11 @@ async def scrape_maps(search_term: str, max_results: int, on_result: Callable) -
         )
         # Remove webdriver flag para evitar detecção de bot
         await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        # Bloquear imagens, fontes e media para carregar páginas mais rápido
+        await context.route(
+            "**/*.{png,jpg,jpeg,gif,svg,webp,ico,woff,woff2,ttf,mp4,mp3}",
+            lambda route: route.abort()
+        )
         page = await context.new_page()
 
         encoded = search_term.replace(" ", "+")
@@ -65,10 +78,10 @@ async def scrape_maps(search_term: str, max_results: int, on_result: Callable) -
         )
         # Aguarda o feed lateral aparecer (confirma que a busca carregou)
         try:
-            await page.wait_for_selector('div[role="feed"], a[href*="/maps/place/"]', timeout=20000)
+            await page.wait_for_selector('div[role="feed"], a[href*="/maps/place/"]', timeout=15000)
         except Exception:
             pass
-        await page.wait_for_timeout(2000)
+        await page.wait_for_timeout(500)
 
         sidebar_sel = 'div[role="feed"]'
         collected = 0
@@ -101,7 +114,7 @@ async def scrape_maps(search_term: str, max_results: int, on_result: Callable) -
             try:
                 feed = page.locator(sidebar_sel)
                 await feed.evaluate("el => el.scrollBy(0, 800)")
-                await page.wait_for_timeout(1500)
+                await page.wait_for_timeout(400)
             except Exception:
                 break
 
@@ -111,8 +124,8 @@ async def scrape_maps(search_term: str, max_results: int, on_result: Callable) -
 async def _extract_from_href(_page, href: str, context) -> dict | None:
     detail_page = await context.new_page()
     try:
-        await detail_page.goto(href, wait_until="domcontentloaded", timeout=15000)
-        await detail_page.wait_for_timeout(2000)
+        await detail_page.goto(href, wait_until="domcontentloaded", timeout=10000)
+        await detail_page.wait_for_timeout(700)
 
         name = await _text(detail_page, 'h1[class*="DUwDvf"]') or \
                await _text(detail_page, 'h1') or ""
