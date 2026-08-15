@@ -20,6 +20,27 @@ from scrapers.instagram_checker import check_instagram
 
 app = FastAPI(title="Lead Qualifier — Esteticistas")
 
+# ── Supabase ──────────────────────────────────────────────────────────────────
+_supabase_client = None
+
+def _get_sb():
+    global _supabase_client
+    if _supabase_client is None:
+        _url = os.environ.get("SUPABASE_URL", "")
+        _key = os.environ.get("SUPABASE_KEY", "")
+        if _url and _key:
+            try:
+                from supabase import create_client
+                _supabase_client = create_client(_url, _key)
+            except Exception:
+                pass
+    return _supabase_client
+
+async def _sb(fn):
+    """Run a sync supabase call in a thread executor."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, fn)
+
 # ── Browser download state ────────────────────────────────────────────────────
 _browser_state: dict = {"status": "unknown", "error": None}
 
@@ -59,6 +80,21 @@ async def _download_browser_bg():
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(_download_browser_bg())
+    # Load known_leads from Supabase
+    sb = _get_sb()
+    if sb:
+        try:
+            res = await _sb(lambda: sb.table("known_leads").select("*").execute())
+            for row in (res.data or []):
+                known_leads[row["key"]] = {
+                    "name": row.get("name", ""),
+                    "status": row.get("status", ""),
+                    "cidade": row.get("cidade", ""),
+                    "scan_time": row.get("scan_time", ""),
+                    "scan_id": row.get("scan_id", ""),
+                }
+        except Exception:
+            pass
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
@@ -85,6 +121,7 @@ scan_state = {
     "_log_buffer": [],       # últimos 300 logs para reconexão rápida
     "_cidade": "",
     "_max_results": 0,
+    "_scan_id": "",
 }
 
 # Carregar leads salvos em sessão anterior (se existirem)
@@ -124,13 +161,14 @@ def _save_known_leads():
         pass
 
 
-def _save_to_history():
-    """Persiste a varredura concluída no diretório de histórico."""
+async def _save_to_history():
+    """Persiste a varredura concluída no Supabase e localmente."""
     if not scan_state["leads"]:
         return
     scan_id = scan_state.get("_scan_id") or f"SCAN-{int(__import__('time').time())}"
     entry = {
         "id": scan_id,
+        "scan_id": scan_id,
         "trashed": False,
         "scan_time": scan_state.get("scan_time", "—"),
         "cidade": scan_state.get("_cidade", ""),
@@ -138,13 +176,43 @@ def _save_to_history():
         "stats": dict(scan_state["stats"]),
         "leads": list(scan_state["leads"]),
     }
+    # Save to Supabase
+    sb = _get_sb()
+    if sb:
+        try:
+            db_entry = {k: v for k, v in entry.items() if k != "id"}
+            _e = db_entry
+            await _sb(lambda: sb.table("scans").upsert(_e).execute())
+        except Exception:
+            pass
+    # Save to local file (within-session SSE recovery)
     try:
         (HISTORY_DIR / f"{scan_id}.json").write_text(
-            json.dumps(entry, ensure_ascii=False),
-            encoding="utf-8"
+            json.dumps(entry, ensure_ascii=False), encoding="utf-8"
         )
     except Exception:
         pass
+
+
+async def _push_known_leads_to_db():
+    """Upserts known_leads from current scan to Supabase."""
+    sb = _get_sb()
+    if not sb:
+        return
+    current_scan_id = scan_state.get("_scan_id", "")
+    rows = [
+        {"key": k, "name": v.get("name", ""), "status": v.get("status", ""),
+         "cidade": v.get("cidade", ""), "scan_time": v.get("scan_time", ""),
+         "scan_id": v.get("scan_id", "")}
+        for k, v in known_leads.items()
+        if v.get("scan_id") == current_scan_id
+    ]
+    if rows:
+        try:
+            _rows = rows
+            await _sb(lambda: sb.table("known_leads").upsert(_rows).execute())
+        except Exception:
+            pass
 
 
 def _broadcast(event: dict):
@@ -293,7 +361,6 @@ async def _run_scan(cidade: str, max_results: int):
             if _website:
                 _wl = _website.lower()
                 if "instagram.com" in _wl:
-                    # Extrair @username do link do Instagram cadastrado como site
                     _m = re.search(r'instagram\.com/([^/?#\s]+)', _website, re.IGNORECASE)
                     if _m:
                         _ig_slug = _m.group(1).strip('/').strip()
@@ -332,7 +399,6 @@ async def _run_scan(cidade: str, max_results: int):
                 lead["ig_bio"] = ig_result.get("bio", "")[:120]
                 lead["ig_url"] = f"https://instagram.com/{ig_username}"
 
-                # Tentar extrair telefone da bio se o Maps não tinha
                 if not lead.get("phone") and ig_result.get("bio"):
                     _bio = ig_result["bio"]
                     _pm = re.search(r'(\+?[\d][\d\s\(\)\-]{6,}[\d])', _bio)
@@ -391,7 +457,8 @@ async def _run_scan(cidade: str, max_results: int):
 
         _save_to_disk()
         _save_known_leads()
-        _save_to_history()
+        await _save_to_history()
+        await _push_known_leads_to_db()
         scan_state["running"] = False
         _broadcast({"type": "complete", "stats": dict(scan_state["stats"])})
         log(
@@ -437,6 +504,13 @@ async def reset_all():
     scan_state["_cidade"] = ""
     scan_state["_log_buffer"] = []
     known_leads.clear()
+    # Clear from Supabase
+    sb = _get_sb()
+    if sb:
+        try:
+            await _sb(lambda: sb.table("known_leads").delete().neq("key", "").execute())
+        except Exception:
+            pass
     for f in [LEADS_FILE, STATS_FILE, KNOWN_LEADS_FILE]:
         try:
             f.unlink(missing_ok=True)
@@ -448,13 +522,43 @@ async def reset_all():
 @app.post("/api/trash-scan/{scan_id}")
 async def trash_scan(scan_id: str):
     """Move varredura para lixeira e remove seus leads do known_leads."""
+    sb = _get_sb()
+
+    if sb:
+        try:
+            _id = scan_id
+            res = await _sb(lambda: sb.table("scans").select("*").eq("scan_id", _id).execute())
+            if res.data:
+                data = res.data[0]
+                await _sb(lambda: sb.table("scans").update({"trashed": True}).eq("scan_id", _id).execute())
+                await _sb(lambda: sb.table("known_leads").delete().eq("scan_id", _id).execute())
+                removed = 0
+                for lead in data.get("leads", []):
+                    phone = re.sub(r'\D', '', lead.get("phone", ""))
+                    k = phone if len(phone) >= 8 else lead.get("name", "").lower().strip()
+                    if k and k in known_leads and known_leads[k].get("scan_id") == scan_id:
+                        del known_leads[k]
+                        removed += 1
+                _save_known_leads()
+                f = HISTORY_DIR / f"{scan_id}.json"
+                if f.exists():
+                    try:
+                        local = json.loads(f.read_text(encoding="utf-8"))
+                        local["trashed"] = True
+                        f.write_text(json.dumps(local, ensure_ascii=False), encoding="utf-8")
+                    except Exception:
+                        pass
+                return {"ok": True, "removed_from_known": removed}
+        except Exception:
+            pass
+
+    # Fallback to local file
     f = HISTORY_DIR / f"{scan_id}.json"
     if not f.exists():
         raise HTTPException(status_code=404, detail="Varredura não encontrada")
     data = json.loads(f.read_text(encoding="utf-8"))
     data["trashed"] = True
     f.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-    # Remove leads desta varredura do known_leads
     removed = 0
     for lead in data.get("leads", []):
         phone = re.sub(r'\D', '', lead.get("phone", ""))
@@ -469,13 +573,53 @@ async def trash_scan(scan_id: str):
 @app.post("/api/restore-scan/{scan_id}")
 async def restore_scan(scan_id: str):
     """Restaura varredura da lixeira e re-adiciona leads ao known_leads."""
+    sb = _get_sb()
+
+    if sb:
+        try:
+            _id = scan_id
+            res = await _sb(lambda: sb.table("scans").select("*").eq("scan_id", _id).execute())
+            if res.data:
+                data = res.data[0]
+                await _sb(lambda: sb.table("scans").update({"trashed": False}).eq("scan_id", _id).execute())
+                added = 0
+                rows_to_upsert = []
+                for lead in data.get("leads", []):
+                    phone = re.sub(r'\D', '', lead.get("phone", ""))
+                    k = phone if len(phone) >= 8 else lead.get("name", "").lower().strip()
+                    if k and k not in known_leads:
+                        known_leads[k] = {
+                            "name": lead.get("name", ""),
+                            "status": lead.get("status", ""),
+                            "cidade": data.get("cidade", ""),
+                            "scan_time": data.get("scan_time", ""),
+                            "scan_id": scan_id,
+                        }
+                        rows_to_upsert.append({"key": k, **known_leads[k]})
+                        added += 1
+                if rows_to_upsert:
+                    _rows = rows_to_upsert
+                    await _sb(lambda: sb.table("known_leads").upsert(_rows).execute())
+                _save_known_leads()
+                f = HISTORY_DIR / f"{scan_id}.json"
+                if f.exists():
+                    try:
+                        local = json.loads(f.read_text(encoding="utf-8"))
+                        local["trashed"] = False
+                        f.write_text(json.dumps(local, ensure_ascii=False), encoding="utf-8")
+                    except Exception:
+                        pass
+                return {"ok": True, "added_to_known": added}
+        except Exception:
+            pass
+
+    # Fallback to local file
     f = HISTORY_DIR / f"{scan_id}.json"
     if not f.exists():
         raise HTTPException(status_code=404, detail="Varredura não encontrada")
     data = json.loads(f.read_text(encoding="utf-8"))
     data["trashed"] = False
     f.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-    # Re-adiciona leads ao known_leads
     added = 0
     for lead in data.get("leads", []):
         phone = re.sub(r'\D', '', lead.get("phone", ""))
@@ -495,7 +639,6 @@ async def restore_scan(scan_id: str):
 
 @app.get("/api/version")
 async def version():
-    """Retorna o commit hash deployado — para confirmar que Railway está pegando o código do GitHub."""
     import subprocess
     try:
         commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL).decode().strip()
@@ -506,7 +649,6 @@ async def version():
 
 @app.get("/api/health")
 async def health():
-    """Diagnóstico do ambiente — verifica Playwright browser e Chromium do sistema."""
     import glob as _glob
     from scrapers.maps_scraper import _find_chromium, _SYSTEM_CHROMIUM
 
@@ -524,12 +666,12 @@ async def health():
         "pb_top_level": pb_top,
         "playwright_bins": chrome_bins[:3],
         "app_dir": sorted(str(p.name) for p in Path("/app").iterdir()) if Path("/app").exists() else [],
+        "supabase_connected": _get_sb() is not None,
     }
 
 
 @app.get("/api/test-browser")
 async def test_browser():
-    """Tenta lançar o Chromium via Playwright e retorna o resultado."""
     from playwright.async_api import async_playwright
     import traceback
     try:
@@ -553,7 +695,6 @@ async def root():
 
 @app.get("/api/status")
 async def status():
-    """Estado atual da varredura — para polling sem SSE."""
     return {
         "running": scan_state["running"],
         "cidade": scan_state["_cidade"],
@@ -564,15 +705,17 @@ async def status():
 
 
 @app.get("/api/leads")
-async def get_leads():
-    """Retorna todos os leads da sessão atual (ou carregados do disco)."""
+async def get_leads(status_filter: str = "ALL"):
+    leads = scan_state["leads"]
+    if status_filter != "ALL":
+        leads = [l for l in leads if l.get("status") == status_filter]
     return {
-        "leads": scan_state["leads"],
+        "leads": leads,
         "stats": scan_state["stats"],
         "scan_time": scan_state.get("scan_time"),
         "cidade": scan_state.get("_cidade", ""),
         "running": scan_state["running"],
-        "total": len(scan_state["leads"]),
+        "total": len(leads),
     }
 
 
@@ -582,41 +725,24 @@ async def stop_scan():
     return {"ok": True}
 
 
-@app.get("/api/leads")
-async def get_leads(status_filter: str = "ALL"):
-    """Retorna todos os leads em JSON (para overnight_scan.py)."""
-    leads = scan_state["leads"]
-    if status_filter != "ALL":
-        leads = [l for l in leads if l.get("status") == status_filter]
-    return {"leads": leads, "stats": scan_state["stats"]}
-
-
 @app.get("/api/scan")
 async def scan(
     cidade: str = Query(...),
     max_results: int = Query(default=200, le=2500),
 ):
-    """
-    SSE stream — inicia varredura de fundo ou conecta à varredura em curso.
-    O scan persiste mesmo se o browser fechar.
-    """
-    # Iniciar task de fundo se não estiver rodando
     task_done = scan_state["_task"] is None or scan_state["_task"].done()
     if not scan_state["running"] and task_done:
         scan_state["_task"] = asyncio.create_task(_run_scan(cidade, max_results))
 
-    # Fila exclusiva para este cliente SSE
     q: asyncio.Queue = asyncio.Queue(maxsize=2000)
     scan_state["_subscribers"].append(q)
 
-    # Replay dos últimos logs para reconexão
     for event in scan_state["_log_buffer"][-100:]:
         try:
             q.put_nowait(event)
         except asyncio.QueueFull:
             break
 
-    # Enviar leads já capturados para cliente que reconecta
     for lead in scan_state["leads"]:
         try:
             q.put_nowait({"type": "lead", "lead": lead})
@@ -636,12 +762,10 @@ async def scan(
                     if event.get("type") == "complete":
                         break
                 except asyncio.TimeoutError:
-                    # Keepalive SSE
                     yield ": keepalive\n\n"
                     if not scan_state["running"]:
                         break
         except GeneratorExit:
-            # Browser fechou — scan continua em background
             pass
         finally:
             try:
@@ -661,8 +785,6 @@ async def scan(
 
 @app.post("/api/upload")
 async def upload_csv(file: UploadFile = File(...)):
-    """Recebe CSV existente e processa filtro via SSE."""
-
     async def event_stream():
         scan_state["running"] = True
         scan_state["stop_requested"] = False
@@ -764,7 +886,6 @@ async def upload_csv(file: UploadFile = File(...)):
 
 @app.get("/api/step-data/{step}")
 async def step_data(step: str):
-    """Retorna dados por etapa do pipeline para o drawer da UI."""
     leads = scan_state["leads"]
     scan_time = scan_state.get("scan_time") or "—"
 
@@ -821,7 +942,6 @@ async def export_csv(filter: str = "QUALIFICADO"):
     writer.writeheader()
     writer.writerows(_clean(l) for l in leads)
 
-    # encode("utf-8-sig") adiciona BOM automaticamente — Excel/LibreOffice reconhecem UTF-8
     content = output.getvalue().encode("utf-8-sig")
 
     from fastapi.responses import Response
@@ -835,6 +955,28 @@ async def export_csv(filter: str = "QUALIFICADO"):
 @app.get("/api/history")
 async def list_history():
     """Lista varreduras salvas separando ativas de lixeira."""
+    sb = _get_sb()
+
+    if sb:
+        try:
+            res = await _sb(lambda: sb.table("scans").select("scan_id,scan_time,cidade,max_results,stats,leads,trashed").order("created_at", desc=True).limit(200).execute())
+            active, trashed = [], []
+            for row in (res.data or []):
+                entry = {
+                    "id": row["scan_id"],
+                    "scan_time": row.get("scan_time", "—"),
+                    "cidade": row.get("cidade", "—"),
+                    "max_results": row.get("max_results", 0),
+                    "stats": row.get("stats", {}),
+                    "total": len(row.get("leads", [])),
+                    "trashed": row.get("trashed", False),
+                }
+                (trashed if row.get("trashed") else active).append(entry)
+            return {"history": active, "trashed": trashed, "count": len(active)}
+        except Exception:
+            pass
+
+    # Fallback to local files
     active, trashed = [], []
     for f in sorted(HISTORY_DIR.glob("SCAN-*.json"), reverse=True)[:200]:
         try:
@@ -857,6 +999,16 @@ async def list_history():
 @app.get("/api/history/{scan_id}")
 async def get_history_scan(scan_id: str):
     """Retorna todos os dados de uma varredura específica."""
+    sb = _get_sb()
+    if sb:
+        try:
+            _id = scan_id
+            res = await _sb(lambda: sb.table("scans").select("*").eq("scan_id", _id).execute())
+            if res.data:
+                row = res.data[0]
+                return {**row, "id": row["scan_id"]}
+        except Exception:
+            pass
     f = HISTORY_DIR / f"{scan_id}.json"
     if not f.exists():
         raise HTTPException(status_code=404, detail="Varredura não encontrada")
@@ -867,10 +1019,25 @@ async def get_history_scan(scan_id: str):
 async def export_history_csv(scan_id: str):
     """Exporta CSV de uma varredura do histórico."""
     from fastapi.responses import Response
-    f = HISTORY_DIR / f"{scan_id}.json"
-    if not f.exists():
-        raise HTTPException(status_code=404, detail="Varredura não encontrada")
-    data = json.loads(f.read_text(encoding="utf-8"))
+
+    data = None
+    sb = _get_sb()
+    if sb:
+        try:
+            _id = scan_id
+            res = await _sb(lambda: sb.table("scans").select("*").eq("scan_id", _id).execute())
+            if res.data:
+                row = res.data[0]
+                data = {**row, "id": row["scan_id"]}
+        except Exception:
+            pass
+
+    if data is None:
+        f = HISTORY_DIR / f"{scan_id}.json"
+        if not f.exists():
+            raise HTTPException(status_code=404, detail="Varredura não encontrada")
+        data = json.loads(f.read_text(encoding="utf-8"))
+
     leads = data.get("leads", [])
     cidade_slug = (data.get("cidade") or "scan").replace(" ", "-").replace("/", "-")[:30]
     date_slug = (data.get("scan_time") or "").replace("/", "").replace(":", "").replace(" ", "-").replace("às", "")[:14]
